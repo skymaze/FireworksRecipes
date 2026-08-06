@@ -1,0 +1,11 @@
+# 构建上下文 = 仓库根（base Dockerfile 需 COPY overlay/）。排除非构建所需内容。
+.git
+.build-ref
+.dockerbuild
+dist
+logs/
+models/
+scripts/
+*.tar
+*.tgz
+docs/
