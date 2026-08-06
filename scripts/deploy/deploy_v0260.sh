@@ -33,6 +33,7 @@ for h in "$H1" "$H2"; do
 done
 
 log "3) 启动 worker（${H2} rank1 --headless）"
+export MASTER_ADDR="$H1"
 bash scripts/deploy/run_vllm_node.sh "$H2" 1 1 "$IMG"
 sleep 5
 

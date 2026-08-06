@@ -194,3 +194,31 @@ Out of memory: Killed process 1952195 (VLLM::Worker_TP)
   - 本轮部署窗口 **0 次 oom-kill**（journalctl 确认；52 次历史 oom-kill 均为上次
     崩溃时间点 UTC 02:xx 的旧记录），swap 峰值仅用 3GiB 兜底。
   - decode 512@conc1 = 32.7 tok/s（正常量级）。
+
+## 追加4：推理期 TileLang 编译链卡死（EngineCore 28 分钟无心跳）根因与修复（2026-08-06 v0.3.1）
+
+### 现象
+服务"崩溃"：请求长时间无响应。head 日志 Engine 000 心跳（每 10s 一条）出现
+**18 分钟（06:09→06:27）与 28 分钟（07:31→07:59）的完全空洞**，期间 EngineCore
+阻塞（stats 停止、无错误日志、无 OOM）；恢复后一切正常（自愈）。
+
+### 根因（缓存 mtime + 日志关联定位）
+1. **fw-warmup 覆盖缺口**：mHC 内核 `n_splits = compute_num_split(64, h,
+   cdiv(num_tokens, 64))` 按 **grid = cdiv(num_tokens, 64) 分桶**（每 64 token 一桶）。
+   启动 warmup 候选集只含 2 的幂（15 个值 → 仅覆盖 9/128 个桶）。
+2. **长上下文 prefill 余数 chunk**：8192 分块后最后一段为任意余数（如 246K =
+   30×8192+1567 → grid=25），落在未覆盖桶 → 触发该桶变体的 TileLang 编译。
+3. **编译链阻塞**：tilelang 缓存 mtime 实证 06:08-06:27 连续写入 8 个新内核
+   （`mhc_pre_big_fuse_broadcast_with_norm_tilelang` / `mhc_pre_big_fuse_with_norm_tilelang`
+   等，单次 4-90s）→ 每个变体编译都在推理路径内同步执行 → EngineCore 步进被
+   阻塞 → 心跳空洞（18 分钟）；多个新桶变体陆续编译 + 大请求叠加 → 28 分钟空洞。
+
+### 修复（v0.3.1）
+- fw-warmup 补丁 `_DEFAULT_TOKEN_SIZE_CANDIDATES` 替换为**每 64 token 一个代表**
+  （135 个候选，覆盖 grid 桶 1..128 全部 + small-FMA 小值）→ 启动即编译全部
+  n_splits 变体，推理期零 TileLang 编译。
+- 重新生成 JIT 缓存 seed 并 bake 进镜像（含全部桶变体）。
+
+### 实测（2026-08-06）
+- 0.3.1 启动：warmup token sizes 135 个（1..8192 全覆盖），2.35s 完成（此前 15 个/0.75s）。
+- 长上下文请求验证：见下方结果（追加4 验证节）。

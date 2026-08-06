@@ -18,8 +18,11 @@
        hc_attn_fn_broadcast 等，不再要求 hc_pre/hc_post）
      - ``_warmup_layer_mhc``：新增 NVIDIA 分支 —— 直接调 ``mhc_pre_broadcast_tilelang``
        (2D 首层 broadcast) / ``mhc_pre_tilelang`` (3D) / ``mhc_fused_post_pre_tilelang``
-       (attn+ffn)，token sizes 用现有候选集 {1..16384}+cudagraph sizes
+       (attn+ffn)，token sizes 用候选集 {1..16384}+cudagraph sizes
      - ``_warmup_hc_head``：新增 NVIDIA 分支 —— 直接调 ``hc_head_fused_kernel_tilelang``
+     - ``_DEFAULT_TOKEN_SIZE_CANDIDATES``：替换为每 64 token 一个代表（135 个候选），
+       grid = cdiv(num_tokens,64) 的 1..128 桶全覆盖 —— 消除长上下文 prefill 余数
+       chunk 触发推理期 TileLang 编译链（2026-08-06 三次 EngineCore 卡死根因）
 
 幂等（MARKER 标记）/ AST 形状校验 / 安全降级：与 hybrid-draft-loader 同风格。
 """
@@ -319,6 +322,171 @@ HC_HEAD_NEW = MARKER + "\n" + """    max_tokens = max(token_sizes)
         )"""
 
 
+# 3) _DEFAULT_TOKEN_SIZE_CANDIDATES：覆盖全部 grid 桶（2026-08-06 三次崩溃根因）
+#    mhc 内核 n_splits = compute_num_split(64, h, cdiv(num_tokens, 64))，即按
+#    grid = cdiv(num_tokens, 64) 分桶；启动 warmup 候选集只含 2 的幂（9/128 桶），
+#    长上下文 prefill 的余数 chunk（如 246K = 30×8192 + 1567 → grid=25）落在未覆盖
+#    桶 → 推理期 TileLang 编译链（实测 06:07-06:27 编译 8 内核，EngineCore 卡死
+#    18-28 分钟）。替换为每 64 token 一个代表（grid 1..128 全覆盖）+ small-FMA 小值。
+TOKEN_SIZES_OLD = """_DEFAULT_TOKEN_SIZE_CANDIDATES = (
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096,
+    8192,
+    16_384,
+)"""
+
+TOKEN_SIZES_NEW = MARKER + """
+# fw mod: 全覆盖 grid 桶（1..128）：每 64 token 一个代表 + small-FMA 小值
+_DEFAULT_TOKEN_SIZE_CANDIDATES = (
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    192,
+    256,
+    320,
+    384,
+    448,
+    512,
+    576,
+    640,
+    704,
+    768,
+    832,
+    896,
+    960,
+    1024,
+    1088,
+    1152,
+    1216,
+    1280,
+    1344,
+    1408,
+    1472,
+    1536,
+    1600,
+    1664,
+    1728,
+    1792,
+    1856,
+    1920,
+    1984,
+    2048,
+    2112,
+    2176,
+    2240,
+    2304,
+    2368,
+    2432,
+    2496,
+    2560,
+    2624,
+    2688,
+    2752,
+    2816,
+    2880,
+    2944,
+    3008,
+    3072,
+    3136,
+    3200,
+    3264,
+    3328,
+    3392,
+    3456,
+    3520,
+    3584,
+    3648,
+    3712,
+    3776,
+    3840,
+    3904,
+    3968,
+    4032,
+    4096,
+    4160,
+    4224,
+    4288,
+    4352,
+    4416,
+    4480,
+    4544,
+    4608,
+    4672,
+    4736,
+    4800,
+    4864,
+    4928,
+    4992,
+    5056,
+    5120,
+    5184,
+    5248,
+    5312,
+    5376,
+    5440,
+    5504,
+    5568,
+    5632,
+    5696,
+    5760,
+    5824,
+    5888,
+    5952,
+    6016,
+    6080,
+    6144,
+    6208,
+    6272,
+    6336,
+    6400,
+    6464,
+    6528,
+    6592,
+    6656,
+    6720,
+    6784,
+    6848,
+    6912,
+    6976,
+    7040,
+    7104,
+    7168,
+    7232,
+    7296,
+    7360,
+    7424,
+    7488,
+    7552,
+    7616,
+    7680,
+    7744,
+    7808,
+    7872,
+    7936,
+    8000,
+    8064,
+    8128,
+    8192,
+    16_384,
+)"""
+
+
 def _required_symbols() -> set[str]:
     return {
         "deepseek_v4_mhc_warmup",
@@ -346,8 +514,8 @@ def patch_mhc_warmup(text: str) -> str:
         raise ValueError("deepseek_v4_mhc_warmup.py 形状不符，缺少: " + ", ".join(missing))
 
     if MARKER in text:
-        if text.count(MARKER) != 3:
-            raise ValueError("fw-warmup 标记出现次数 != 3（deepseek_v4_mhc_warmup）")
+        if text.count(MARKER) != 4:
+            raise ValueError("fw-warmup 标记出现次数 != 4（deepseek_v4_mhc_warmup）")
         compile(text, "<patched deepseek_v4_mhc_warmup.py>", "exec")
         return text
 
@@ -355,6 +523,7 @@ def patch_mhc_warmup(text: str) -> str:
         (FIND_LAYER_OLD, FIND_LAYER_NEW, "_find_first_mhc_layer"),
         (WARMUP_LAYER_OLD, WARMUP_LAYER_NEW, "_warmup_layer_mhc"),
         (HC_HEAD_OLD, HC_HEAD_NEW, "_warmup_hc_head"),
+        (TOKEN_SIZES_OLD, TOKEN_SIZES_NEW, "_DEFAULT_TOKEN_SIZE_CANDIDATES"),
     ):
         if text.count(anchor) != 1:
             raise ValueError(
