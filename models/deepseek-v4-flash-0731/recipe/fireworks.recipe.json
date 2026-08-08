@@ -11,7 +11,9 @@
       "source": "user",
       "default": "fireworks-models/deepseek-v4-flash-0731:0.3.1",
       "picker": "image",
-      "help": "DeepSeek-V4-Flash-0731 专属镜像（主流 vLLM v0.26.0 + GB10 overlay）；从已拉取镜像中选择"
+      "help": "DeepSeek-V4-Flash-0731 专属镜像（主流 vLLM v0.26.0 + GB10 overlay）；从已拉取镜像中选择",
+      "label_en": "Dedicated image",
+      "help_en": "DeepSeek-V4-Flash-0731 dedicated image (mainline vLLM v0.26.0 + GB10 overlay); pick from pulled images"
     },
     {
       "key": "DSPARK_MODEL",
@@ -21,14 +23,17 @@
       "default": "deepseek-ai/DeepSeek-V4-Flash-0731",
       "required": true,
       "picker": "model",
-      "help": "从已下载模型中选择（控制平面下载后分发到各节点 HF 缓存，镜像离线加载）"
+      "help": "从已下载模型中选择（控制平面下载后分发到各节点 HF 缓存，镜像离线加载）",
+      "label_en": "Model",
+      "help_en": "Pick from downloaded models (distributed to node HF caches; image loads offline)"
     },
     {
       "key": "SERVED_MODEL_NAME",
       "label": "对外服务名",
       "type": "string",
       "source": "user",
-      "default": "deepseek-v4-flash-0731"
+      "default": "deepseek-v4-flash-0731",
+      "label_en": "Served model name"
     },
     {
       "key": "VLLM_PORT",
@@ -36,7 +41,8 @@
       "type": "int",
       "source": "user",
       "default": "8000",
-      "help": "健康检查将轮询 head 节点该端口的 /v1/models"
+      "help": "健康检查将轮询 head 节点该端口的 /v1/models",
+      "label_en": "vLLM API port"
     },
     {
       "key": "KV_CACHE_DTYPE",
@@ -44,14 +50,17 @@
       "type": "string",
       "source": "user",
       "default": "nvfp4_ds_mla",
-      "help": "DS-MLA 4-bit KV（已验证 1M 上下文）；nvfp4_ds_mla 推荐，fp8_ds_mla 可用"
+      "help": "DS-MLA 4-bit KV（已验证 1M 上下文）；nvfp4_ds_mla 推荐，fp8_ds_mla 可用",
+      "label_en": "KV cache dtype",
+      "help_en": "DS-MLA 4-bit KV (validated at 1M context); nvfp4_ds_mla recommended, fp8_ds_mla works"
     },
     {
       "key": "MAX_MODEL_LEN",
       "label": "最大上下文长度",
       "type": "int",
       "source": "user",
-      "default": "1048576"
+      "default": "1048576",
+      "label_en": "Max context length"
     },
     {
       "key": "MAX_NUM_SEQS",
@@ -59,14 +68,17 @@
       "type": "int",
       "source": "user",
       "default": "6",
-      "help": "ref1/ref2 内存形状；capture≈seqs×(MTP+1)"
+      "help": "ref1/ref2 内存形状；capture≈seqs×(MTP+1)",
+      "label_en": "Max concurrent sequences",
+      "help_en": "ref1/ref2 memory shape; capture ≈ seqs × (MTP+1)"
     },
     {
       "key": "MAX_NUM_BATCHED_TOKENS",
       "label": "单批最大 token 数",
       "type": "int",
       "source": "user",
-      "default": "8192"
+      "default": "8192",
+      "label_en": "Max batched tokens"
     },
     {
       "key": "GPU_MEMORY_UTILIZATION",
@@ -74,14 +86,17 @@
       "type": "float",
       "source": "user",
       "default": "0.88",
-      "help": "1M 上下文需 ≥0.88（DeepGEMM 栈权重占用；0.80 仅 b12x 栈可行）"
+      "help": "1M 上下文需 ≥0.88（DeepGEMM 栈权重占用；0.80 仅 b12x 栈可行）",
+      "label_en": "GPU memory utilization",
+      "help_en": "1M context needs ≥0.88 (DeepGEMM weight footprint; 0.80 only on the b12x stack)"
     },
     {
       "key": "BLOCK_SIZE",
       "label": "KV 缓存 block 大小",
       "type": "int",
       "source": "user",
-      "default": "256"
+      "default": "256",
+      "label_en": "KV cache block size"
     },
     {
       "key": "MAX_CUDAGRAPH_CAPTURE_SIZE",
@@ -89,14 +104,17 @@
       "type": "int",
       "source": "user",
       "default": "36",
-      "help": "= max_num_seqs × (num_speculative_tokens + 1)，6×6=36"
+      "help": "= max_num_seqs × (num_speculative_tokens + 1)，6×6=36",
+      "label_en": "Max CUDA graph capture size",
+      "help_en": "= max_num_seqs × (num_speculative_tokens + 1), 6×6=36"
     },
     {
       "key": "NUM_SPECULATIVE_TOKENS",
       "label": "DSpark 投机 token 数",
       "type": "int",
       "source": "user",
-      "default": "5"
+      "default": "5",
+      "label_en": "DSpark speculative tokens"
     },
     {
       "key": "TENSOR_PARALLEL_SIZE",
@@ -104,7 +122,9 @@
       "type": "int",
       "source": "user",
       "default": "2",
-      "help": "默认 2（GB10 每机 1 GPU，TP=节点数=2；已按双节点拓扑调优，不建议更改）"
+      "help": "默认 2（GB10 每机 1 GPU，TP=节点数=2；已按双节点拓扑调优，不建议更改）",
+      "label_en": "Tensor parallel size",
+      "help_en": "Default 2 (1 GPU per GB10 node, TP = node count = 2; tuned for the 2-node topology, keep as is)"
     },
     {
       "key": "MASTER_ADDR",
@@ -113,7 +133,9 @@
       "source": "cluster",
       "auto": "head_roce_ip",
       "required": true,
-      "help": "自动填充当前任务的 head 节点 RoCE IP（随任务指定，与集群成员/历史角色无关）"
+      "help": "自动填充当前任务的 head 节点 RoCE IP（随任务指定，与集群成员/历史角色无关）",
+      "label_en": "Head cluster addr (task head's RoCE IP)",
+      "help_en": "Filled with the current task head's RoCE IP (per-task, independent of cluster membership)"
     },
     {
       "key": "MASTER_PORT",
@@ -121,7 +143,9 @@
       "type": "int",
       "source": "user",
       "default": "25000",
-      "help": "分布式主端口（Master 端口，属配方用户变量；head rank0 监听）"
+      "help": "分布式主端口（Master 端口，属配方用户变量；head rank0 监听）",
+      "label_en": "Distributed master port",
+      "help_en": "Distributed master port (recipe user variable; head rank 0 listens)"
     },
     {
       "key": "NODES_TOTAL",
@@ -130,7 +154,9 @@
       "source": "cluster",
       "auto": "nodes_total",
       "required": true,
-      "help": "由任务节点数自动填充（本配方为固定 2 节点拓扑，发布时校验恰好匹配）"
+      "help": "由任务节点数自动填充（本配方为固定 2 节点拓扑，发布时校验恰好匹配）",
+      "label_en": "Node count",
+      "help_en": "Auto-filled from task node count (fixed 2-node topology; publish validates exact match)"
     },
     {
       "key": "NODE_RANK",
@@ -138,7 +164,8 @@
       "type": "int",
       "source": "node",
       "auto": "node_rank",
-      "required": true
+      "required": true,
+      "label_en": "Node rank"
     },
     {
       "key": "HEADLESS",
@@ -146,7 +173,8 @@
       "type": "string",
       "source": "node",
       "auto": "headless",
-      "help": "自动按角色填充：head 空、worker 1（mp 多节点协调必需）"
+      "help": "自动按角色填充：head 空、worker 1（mp 多节点协调必需）",
+      "label_en": "Headless (worker: no API server)"
     },
     {
       "key": "VLLM_HOST_IP",
@@ -154,7 +182,8 @@
       "type": "string",
       "source": "node",
       "auto": "node_roce_ip",
-      "help": "各节点 RoCE IP，避免分布式绑定错误地址"
+      "help": "各节点 RoCE IP，避免分布式绑定错误地址",
+      "label_en": "Local vLLM bind IP"
     },
     {
       "key": "NCCL_IB_HCA",
@@ -162,7 +191,9 @@
       "type": "string",
       "source": "node",
       "auto": "hca",
-      "help": "多 HCA 逗号分隔，自动选择全部可用链路"
+      "help": "多 HCA 逗号分隔，自动选择全部可用链路",
+      "label_en": "RoCE HCA",
+      "help_en": "Multiple HCAs comma-separated; auto-selects all usable links"
     },
     {
       "key": "NCCL_SOCKET_IFNAME",
@@ -170,7 +201,9 @@
       "type": "string",
       "source": "node",
       "auto": "netdev",
-      "help": "自动解析主用 RoCE 口 netdev"
+      "help": "自动解析主用 RoCE 口 netdev",
+      "label_en": "NCCL network interface",
+      "help_en": "Auto-resolves the primary RoCE interface netdev"
     },
     {
       "key": "NCCL_IB_GID_INDEX",
@@ -178,10 +211,14 @@
       "type": "int",
       "source": "node",
       "auto": "gid_index",
-      "help": "每节点/HCA 不同且重启漂移，自动解析 RoCEv2 GID"
+      "help": "每节点/HCA 不同且重启漂移，自动解析 RoCEv2 GID",
+      "label_en": "RoCE GID index",
+      "help_en": "Differs per node/HCA and drifts across reboots; auto-resolves the RoCEv2 GID"
     }
   ],
   "version": "0.3.1",
   "nodes": 2,
-  "tensor_parallel": 2
+  "tensor_parallel": 2,
+  "name_en": "DeepSeek-V4-Flash-0731 (dedicated image · v0.26.0 mainline)",
+  "description_en": "Dedicated-image + 2-node TP=2 vLLM serving for DeepSeek-V4-Flash-0731 (locally source-built: mainline vLLM v0.26.0 + Anemll-style GB10 overlay; InstantTensor load + dspark speculative MTP; KV=nvfp4_ds_mla; MoE via the auto (DeepGEMM) native path — on real hardware b12x prefill is unusable under v0.26.0 (~88 tok/s) while auto reaches 2200+ tok/s). The per-model image bakes the hybrid-draft-loader patch and tuned ENV at build time — no runtime apply-mod. Pick cluster/head/worker at publish; the model is distributed by Fireworks to node HF caches and loaded offline."
 }
