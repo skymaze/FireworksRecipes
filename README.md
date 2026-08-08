@@ -13,7 +13,36 @@
 
 | 模型 | 专属镜像 tag | 说明 |
 |---|---|---|
-| DeepSeek-V4-Flash-0731 | `fireworks-models/deepseek-v4-flash-0731:0.3.0` | 主流 vLLM v0.26.0 主路径 / Anemll 式 GB10 overlay / InstantTensor + dspark 投机 MTP=5 / 双节点 TP=2（KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM）· **fw-warmup 补丁（NVIDIA mHC warmup no-op 修复）+ JIT 缓存 bake（`/opt/fw/vllm-cache-seed`，上线零推理期编译）** |
+| DeepSeek-V4-Flash-0731 | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | 主流 vLLM v0.26.0 主路径 / Anemll 式 GB10 overlay / InstantTensor + dspark 投机 MTP=5 / 双节点 TP=2（KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM）· **fw-warmup 补丁（NVIDIA mHC warmup no-op 修复）+ JIT 缓存 bake（`/opt/fw/vllm-cache-seed`，上线零推理期编译）** |
+| DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1`（分发镜像） | 双节点 TP=2 DSpark 服务（MiaAI-Lab 参考配方路线，FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文）。由 Fireworks 原内置配方迁移而来。**固定 2 节点拓扑** |
+
+> **拓扑固定**：所有配方均声明**确切的节点数**（manifest `nodes`/`tensor_parallel`，
+> 如 2 节点 · TP=2），发布时必须恰好匹配——模型参数（KV/上下文/MoE）按该拓扑调优，
+> 不再提供「≥2」的模糊空间；不同拓扑请用对应配方。
+
+---
+
+## 配方目录（Fireworks 直读）
+
+本仓库同时是 **Fireworks 的配方源**：Fireworks 同步本仓库 → 读取目录清单 → 用户从
+「配方商店」一键安装并发布，无需内置初始配方、无需升级 Fireworks 即可拿最新配方。
+
+约定（新增/维护配方时遵守）：
+
+- `recipes/index.json` —— **目录清单（manifest，等同 recipes.vllm.ai 的 /models.json）**：
+  每条列出 `id / provider / model / path / readme / version / params / dtype /
+  context_length / modality / topology / image / tags`。Fireworks 只读它，**不做整树扫描**。
+- `models/<model>/recipe/fireworks.recipe.json` —— 可运行配方，字段对齐 Fireworks
+  `POST /api/recipes/import` schema（`name/description/image/compose_template/variables`），
+  并带 `version`（对齐专属镜像 tag）。
+- `models/<model>/recipe/README.md` —— 介绍文档（用法 / 变量 / 性能 / 更新记录），
+  Fireworks「配方商店」详情里渲染。
+- 配方变量模型跟随 Fireworks 当前版本：`MASTER_ADDR`=`cluster/head_roce_ip`（任务级
+  head 的 RoCE IP）、`MASTER_PORT` 为 `user` 变量（默认 25000）、`NODE_RANK/HEADLESS/
+  VLLM_HOST_IP/NCCL_*` 为 `node` 变量自动填充。
+
+> 仓库大体积构建产物（`.build-ref/`、`dist/`、`logs/`、`seed-cache/`）均在
+> `.gitignore`，公开克隆体积保持轻量，仅含配方/源码/文档。
 
 ---
 

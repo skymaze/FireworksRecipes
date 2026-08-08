@@ -9,7 +9,7 @@
       "label": "专属镜像",
       "type": "string",
       "source": "user",
-      "default": "fireworks-models/deepseek-v4-flash-0731:0.3.0",
+      "default": "fireworks-models/deepseek-v4-flash-0731:0.3.1",
       "picker": "image",
       "help": "DeepSeek-V4-Flash-0731 专属镜像（主流 vLLM v0.26.0 + GB10 overlay）；从已拉取镜像中选择"
     },
@@ -104,24 +104,26 @@
       "type": "int",
       "source": "user",
       "default": "2",
-      "min": 1,
-      "help": "推荐 2（双节点）；单节点可改 1"
+      "min": 2,
+      "help": "固定 2（GB10 每机 1 GPU，TP=节点数=2；已按双节点拓扑调优）",
+      "max": 2
     },
     {
       "key": "MASTER_ADDR",
-      "label": "Head 节点地址",
+      "label": "Head 集群地址（任务级 head 的 RoCE IP）",
       "type": "string",
       "source": "cluster",
-      "auto": "master_addr",
-      "required": true
+      "auto": "head_roce_ip",
+      "required": true,
+      "help": "自动填充当前任务的 head 节点 RoCE IP（随任务指定，与集群成员/历史角色无关）"
     },
     {
       "key": "MASTER_PORT",
       "label": "分布式主端口",
       "type": "int",
-      "source": "cluster",
-      "auto": "master_port",
-      "default": "25000"
+      "source": "user",
+      "default": "25000",
+      "help": "分布式主端口（Master 端口，属配方用户变量；head rank0 监听）"
     },
     {
       "key": "NODES_TOTAL",
@@ -131,7 +133,8 @@
       "auto": "nodes_total",
       "required": true,
       "min": 2,
-      "help": "TP=2 需要 ≥2 节点（head + ≥1 worker）；head 应设为 rank0"
+      "help": "固定 2 节点（head+1 worker，TP=2 双节点配方；节点数/并行度已按此调优）",
+      "max": 2
     },
     {
       "key": "NODE_RANK",
@@ -181,5 +184,6 @@
       "auto": "gid_index",
       "help": "每节点/HCA 不同且重启漂移，自动解析 RoCEv2 GID"
     }
-  ]
+  ],
+  "version": "0.3.1"
 }

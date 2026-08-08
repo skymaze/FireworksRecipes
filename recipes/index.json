@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "name": "FireworksRecipes",
+  "description": "Fireworks 配方目录（manifest 驱动，等同 recipes.vllm.ai 的 /models.json）。每条 = 一个可一键安装并发布到 DGX Spark 集群的模型配方；nodes/tensor_parallel 为固定拓扑（发布时必须恰好匹配，模型参数按此调优）。",
+  "recipes": [
+    {
+      "id": "deepseek-v4-flash-0731",
+      "provider": "deepseek-ai",
+      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "path": "models/deepseek-v4-flash-0731/recipe/fireworks.recipe.json",
+      "readme": "models/deepseek-v4-flash-0731/recipe/README.md",
+      "version": "0.3.1",
+      "params": "284B/13B",
+      "dtype": "nvfp4",
+      "context_length": 1048576,
+      "modality": "text",
+      "topology": "2 nodes · TP=2",
+      "nodes": 2,
+      "tensor_parallel": 2,
+      "image": "fireworks-models/deepseek-v4-flash-0731:0.3.1",
+      "tags": ["dgx-spark", "gb10", "dspark", "speculative", "vllm", "1m-context", "dedicated"],
+      "description": "DeepSeek-V4-Flash-0731 专属镜像 + 双节点 TP=2 vLLM 服务（主流 vLLM v0.26.0 + GB10 定向 overlay，InstantTensor 加载 + dspark 投机 MTP；KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM）。固定 2 节点拓扑。"
+    },
+    {
+      "id": "deepseek-v4-flash-dspark",
+      "provider": "deepseek-ai",
+      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "path": "models/deepseek-v4-flash-dspark/recipe/fireworks.recipe.json",
+      "readme": "models/deepseek-v4-flash-dspark/recipe/README.md",
+      "version": "1.0.0",
+      "params": "284B/13B",
+      "dtype": "nvfp4",
+      "context_length": 1048576,
+      "modality": "text",
+      "topology": "2 nodes · TP=2",
+      "nodes": 2,
+      "tensor_parallel": 2,
+      "image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
+      "tags": ["dgx-spark", "gb10", "dspark", "anemll", "vllm", "1m-context"],
+      "description": "DeepSeek-V4-Flash 双节点 TP=2 DSpark 服务（MiaAI-Lab 参考配方路线，Anemll dspark-vllm-gx10 分发镜像，FlashInfer b12x + dspark 投机，NVFP4 DS-MLA）。原 Fireworks 内置配方，已迁移为配方源标准配方。固定 2 节点拓扑。"
+    }
+  ]
+}
