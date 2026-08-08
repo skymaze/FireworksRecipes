@@ -104,9 +104,7 @@
       "source": "cluster",
       "auto": "nodes_total",
       "required": true,
-      "min": 2,
-      "help": "固定 2 节点（head+1 worker，TP=2 双节点专用配方；节点数/并行度已按此调优）",
-      "max": 2
+      "help": "由任务节点数自动填充（本配方为固定 2 节点拓扑，发布时校验恰好匹配）"
     },
     {
       "key": "NODE_RANK",
@@ -157,5 +155,7 @@
       "help": "每节点/HCA 不同且重启漂移，自动解析"
     }
   ],
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "nodes": 2,
+  "tensor_parallel": 2
 }

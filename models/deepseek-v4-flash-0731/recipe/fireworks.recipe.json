@@ -104,9 +104,7 @@
       "type": "int",
       "source": "user",
       "default": "2",
-      "min": 2,
-      "help": "固定 2（GB10 每机 1 GPU，TP=节点数=2；已按双节点拓扑调优）",
-      "max": 2
+      "help": "默认 2（GB10 每机 1 GPU，TP=节点数=2；已按双节点拓扑调优，不建议更改）"
     },
     {
       "key": "MASTER_ADDR",
@@ -132,9 +130,7 @@
       "source": "cluster",
       "auto": "nodes_total",
       "required": true,
-      "min": 2,
-      "help": "固定 2 节点（head+1 worker，TP=2 双节点配方；节点数/并行度已按此调优）",
-      "max": 2
+      "help": "由任务节点数自动填充（本配方为固定 2 节点拓扑，发布时校验恰好匹配）"
     },
     {
       "key": "NODE_RANK",
@@ -185,5 +181,7 @@
       "help": "每节点/HCA 不同且重启漂移，自动解析 RoCEv2 GID"
     }
   ],
-  "version": "0.3.1"
+  "version": "0.3.1",
+  "nodes": 2,
+  "tensor_parallel": 2
 }
