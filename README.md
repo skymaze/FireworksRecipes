@@ -37,9 +37,11 @@
   并带 `version`（对齐专属镜像 tag）。
 - `models/<model>/recipe/README.md` —— 介绍文档（用法 / 变量 / 性能 / 更新记录），
   Fireworks「配方商店」详情里渲染。
-- **双语（可选）**：文本字段均可带英文并列字段 `xxx_en`（`name_en / description_en /
+- **双向（可选）**：文本字段均可带英文并列字段 `xxx_en`（`name_en / description_en /
   label_en / help_en`）；README 可提供 `README.en.md`。Fireworks 按界面语言选择：
   English 优先取 `_en`，缺省回退主语言（zh）。只写一种语言也可（自动回退）。
+- 详细字段规范见 [docs/RECIPE-FORMAT.md](./docs/RECIPE-FORMAT.md)（配方文件字段、
+  variables 项、manifest、Fireworks 导入/导出本地化行为）。
 - 配方变量模型跟随 Fireworks 当前版本：`MASTER_ADDR`=`cluster/head_roce_ip`（任务级
   head 的 RoCE IP）、`MASTER_PORT` 为 `user` 变量（默认 25000）、`NODE_RANK/HEADLESS/
   VLLM_HOST_IP/NCCL_*` 为 `node` 变量自动填充。
