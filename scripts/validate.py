@@ -94,6 +94,8 @@ def check_recipe(rel: Path) -> list[str]:
     for f in ("nodes", "tensor_parallel"):
         if f in r and r.get(f) is not None and not _is_int(r.get(f)):
             err_at(f"「{f}」必须为整数或 null")
+    if _is_int(r.get("nodes")) and r["nodes"] < 1:
+        err_at("「nodes」必须大于等于 1")
 
     # 变量
     vars_ = r.get("variables") or []
@@ -186,6 +188,8 @@ def check_manifest() -> list[str]:
                 err_at(f"recipes[{i}] 缺少字符串字段「{f}」")
         if not _is_int(it.get("nodes")):
             err_at(f"recipes[{i}] 缺少整数字段「nodes」")
+        elif it["nodes"] < 1:
+            err_at(f"recipes[{i}].nodes 必须大于等于 1")
 
         if not path:
             continue
