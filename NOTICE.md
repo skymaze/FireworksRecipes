@@ -19,6 +19,7 @@ are kept in-file (SPDX headers) and listed here for compliance:
 | MXFP4 MoE kernels (SparkInfer) | [`lukealonso/b12x`](https://github.com/lukealonso/b12x) @ `7dc6fb8` | Apache-2.0 (declared via package metadata) | Installed as an independent package at build time |
 | 1M / NVFP4 KV dual-node recipe reference | [`jvr0x/dgx-spark-bench`](https://github.com/jvr0x/dgx-spark-bench) (`recipes/deepseek-v4-flash-0731-dual`) | - | Parameter/configuration reference only |
 | Dual-node NVFP4 KV reference | [`tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark`](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark) | - | Parameter/configuration reference only |
+| Dual-node DSpark recipe route | [`MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark`](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark) | - | Parameter/configuration reference only (origin of the DSpark recipe route) |
 
 ### Notes
 

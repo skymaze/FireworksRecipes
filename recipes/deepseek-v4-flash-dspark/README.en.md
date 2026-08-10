@@ -1,33 +1,27 @@
-# DeepSeek-V4-Flash 2x DGX Spark (DSpark) · Fireworks recipe doc
+# DeepSeek-V4-Flash DSpark · Fireworks recipe
 
-> Migrated from Fireworks' former built-in seed recipe (MiaAI-Lab reference route); it is
-> now a standard recipe in this source. Install it from the Fireworks Recipe Store and
-> publish — it updates with this repo, **not** with Fireworks releases.
-
-## What it is
-
-Serves DeepSeek-V4-Flash on **exactly 2** DGX Spark nodes (head + 1 worker over the RoCE
-high-speed network) with **Fireworks**:
+Serves DeepSeek-V4-Flash on **exactly 2** DGX Spark nodes (head + 1 worker over RoCE):
 
 - Image: `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` (Anemll prebuilt vLLM distribution image)
-- Topology: **fixed 2 nodes · TP=2** (NVFP4 DS-MLA + FlashInfer b12x + DSpark speculative)
-- Model: `deepseek-ai/DeepSeek-V4-Flash-0731` (~167 GB, distributed by Fireworks model
-  management to node HF caches and loaded offline)
+- Topology: **fixed 2 nodes · TP=2**; FlashInfer b12x + dspark speculation · NVFP4 DS-MLA ·
+  1M context
+- Model: `deepseek-ai/DeepSeek-V4-Flash-0731` (~167 GB, distributed by Fireworks, loaded
+  offline)
 
-> Difference from the "dedicated image" recipe (`deepseek-v4-flash-0731`): this one uses the
-> Anemll distribution image for quickly trying the DSpark speculative path; the dedicated
-> recipe builds vLLM v0.26.0 with a GB10-targeted overlay and has better prefill
-> (`MoE=auto/DeepGEMM`, 2200+ tok/s). Pick whichever fits.
+> Difference from the "dedicated image" recipe `deepseek-v4-flash-0731`: this one uses the
+> Anemll distribution image to quickly try the dspark speculative path; the dedicated recipe
+> builds vLLM v0.26.0 with a GB10-targeted overlay and has better prefill (MoE=auto,
+> 2200+ tok/s). Pick whichever fits.
 
 ## Quick start
 
-1. Cluster **exactly 2** nodes (head + worker) and configure/test RoCE.
-2. Download `deepseek-ai/DeepSeek-V4-Flash-0731` (wizard can send it to nodes).
-3. Pull `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` (one-click distribution).
-4. Recipe Store: install this recipe → **Install & run** → pick cluster → publish.
+Before publishing from Fireworks:
 
-> The wizard locks the node count at exactly 2 (fixed topology; TP/distributed params are
-> tuned for it — no vague "2 or more").
+- Cluster: **exactly 2** nodes (head + 1 worker), RoCE configured and tested.
+- Model: `deepseek-ai/DeepSeek-V4-Flash-0731` distributed to the nodes.
+- Image: `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` pulled.
+
+> The node count is locked at exactly 2; TP/distributed parameters are tuned for it.
 
 ## Main tunables
 
@@ -38,19 +32,25 @@ high-speed network) with **Fireworks**:
 | `VLLM_PORT` | `8888` | vLLM API port |
 | `MAX_MODEL_LEN` | `1048576` | 1M context |
 | `GPU_MEMORY_UTILIZATION` | `0.80` | Memory utilization (b12x stack) |
-| `MTP_NUM_TOKENS` | `5` | DSpark speculative tokens (≥ checkpoint dspark_block_size=5) |
-| `DEFAULT_THINKING` | `off` | off/low/high/max thinking mode |
+| `MTP_NUM_TOKENS` | `5` | DSpark speculative tokens |
+| `DEFAULT_THINKING` | `off` | Thinking mode off/low/high/max |
 
-`NODES_TOTAL` (fixed 2), `MASTER_ADDR` (head's RoCE IP), `NODE_RANK`, `HEADLESS`,
-`VLLM_HOST_IP`, `NCCL_*` are auto-filled.
+`NODES_TOTAL` (fixed 2), `MASTER_ADDR`, `NODE_RANK`, `HEADLESS`, `VLLM_HOST_IP`, `NCCL_*`
+are auto-filled by Fireworks.
 
 ## Known issues
 
-- k<5 silently truncates dspark draft blocks (lower throughput); don't lower `MTP_NUM_TOKENS`.
+- Don't lower `MTP_NUM_TOKENS` below 5: k<5 silently truncates dspark draft blocks and
+  lowers throughput.
 - 1M context is memory-hungry on the b12x stack; keep `GPU_MEMORY_UTILIZATION` ≥0.80.
-- Exactly 2 nodes (TP=2) only; pick a matching recipe or author your own for other topologies.
+- Exactly 2 nodes (TP=2) only; pick a matching recipe or author your own for other
+  topologies.
 
-## Changelog
+## References
 
-- **1.0.0**: migrated from Fireworks' built-in seed to this source; fixed 2-node topology;
-  variable model aligned (`MASTER_ADDR=head_roce_ip`, `MASTER_PORT` as user variable 25000).
+References (full attribution in the repo-root `NOTICE.md`):
+
+- [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark) (DSpark recipe route reference)
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10)
+- [vllm-project/vllm](https://github.com/vllm-project/vllm)
+- [lukealonso/b12x](https://github.com/lukealonso/b12x)

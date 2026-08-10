@@ -11,43 +11,37 @@
 
 当前模型：
 
-| 模型 | 专属镜像 tag | 说明 |
+| 模型 | 镜像 tag | 说明 |
 |---|---|---|
-| DeepSeek-V4-Flash-0731 | `fireworks-recipes/deepseek-v4-flash-0731:0.3.1` | 主流 vLLM v0.26.0 主路径 / Anemll 式 GB10 overlay / InstantTensor + dspark 投机 MTP=5 / 双节点 TP=2（KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM）· **fw-warmup 补丁（NVIDIA mHC warmup no-op 修复）+ JIT 缓存 bake（`/opt/fw/vllm-cache-seed`，上线零推理期编译）** |
-| DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1`（分发镜像） | 双节点 TP=2 DSpark 服务（MiaAI-Lab 参考配方路线，FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文）。由 Fireworks 原内置配方迁移而来。**固定 2 节点拓扑** |
+| DeepSeek-V4-Flash-0731 | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | 双节点 TP=2 · vLLM v0.26.0 主路径 + GB10 定向 overlay · InstantTensor + dspark 投机 MTP=5 · KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM · fw-warmup 补丁 + JIT 缓存 bake，上线零推理期编译 |
+| DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 双节点 TP=2 DSpark 服务，由 Fireworks 原内置配方迁移而来 · FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文 |
 
-> **拓扑固定**：所有配方均声明**确切的节点数**（manifest `nodes`/`tensor_parallel`，
-> 如 2 节点 · TP=2），发布时必须恰好匹配——模型参数（KV/上下文/MoE）按该拓扑调优，
-> 不再提供「≥2」的模糊空间；不同拓扑请用对应配方。
+> **拓扑固定**：所有配方均声明**确切的节点数**，如 2 节点 · TP=2；发布时必须恰好匹配，
+> 模型参数按该拓扑调优，不再提供「≥2」的模糊空间。不同拓扑请选用对应配方。
 
 ---
 
 ## 配方目录（Fireworks 直读）
 
 本仓库同时是 **Fireworks 的配方源**：Fireworks 同步本仓库 → 读取目录清单 → 用户从
-「配方商店」一键安装并发布，无需内置初始配方、无需升级 Fireworks 即可拿最新配方。
+「配方商店」一键安装并发布，无需内置初始配方、无需升级 Fireworks 即可拿到最新配方。
 
-约定（新增/维护配方时遵守）：
+- `recipes/index.json` —— **目录清单**：每条列出 `id / provider / model / path / readme /
+  readme_en / version / params / context_length / modality / nodes / image / tags`；
+  Fireworks 只读它，不做整树扫描。
+- `recipes/<id>/fireworks.recipe.json` —— 可运行配方，字段对齐 Fireworks
+  `POST /api/recipes/import` schema，并带 `version` 对齐专属镜像 tag。
+- `recipes/<id>/README.md` —— 介绍文档，Fireworks「配方商店」详情里渲染；可另配 `README.en.md`。
+- **双向**：文本字段可带英文并列字段 `xxx_en`（`name_en / description_en / label_en /
+  help_en`）；Fireworks 按界面语言选择：English 优先取 `_en`，缺省回退主语言（zh）。
+  只写一种语言也可，自动回退。
+- 详细字段规范见 [docs/RECIPE-FORMAT.md](./docs/RECIPE-FORMAT.md)。
+- 配方变量模型跟随 Fireworks 当前版本：`MASTER_ADDR`=`cluster/head_roce_ip`、
+  `MASTER_PORT` 为用户变量默认 25000、`NODE_RANK / HEADLESS / VLLM_HOST_IP / NCCL_*`
+  为 `node` 变量自动填充。
 
-- `recipes/index.json` —— **目录清单（manifest，等同 recipes.vllm.ai 的 /models.json）**：
-  每条列出 `id / provider / model / path / readme / version / params / dtype /
-  context_length / modality / topology / image / tags`。Fireworks 只读它，**不做整树扫描**。
-- `recipes/<id>/recipe/fireworks.recipe.json` —— 可运行配方，字段对齐 Fireworks
-  `POST /api/recipes/import` schema（`name/description/image/compose_template/variables`），
-  并带 `version`（对齐专属镜像 tag）。
-- `recipes/<id>/recipe/README.md` —— 介绍文档（用法 / 变量 / 性能 / 更新记录），
-  Fireworks「配方商店」详情里渲染。
-- **双向（可选）**：文本字段均可带英文并列字段 `xxx_en`（`name_en / description_en /
-  label_en / help_en`）；README 可提供 `README.en.md`。Fireworks 按界面语言选择：
-  English 优先取 `_en`，缺省回退主语言（zh）。只写一种语言也可（自动回退）。
-- 详细字段规范见 [docs/RECIPE-FORMAT.md](./docs/RECIPE-FORMAT.md)（配方文件字段、
-  variables 项、manifest、Fireworks 导入/导出本地化行为）。
-- 配方变量模型跟随 Fireworks 当前版本：`MASTER_ADDR`=`cluster/head_roce_ip`（任务级
-  head 的 RoCE IP）、`MASTER_PORT` 为 `user` 变量（默认 25000）、`NODE_RANK/HEADLESS/
-  VLLM_HOST_IP/NCCL_*` 为 `node` 变量自动填充。
-
-> 仓库大体积构建产物（`.build-ref/`、`dist/`、`logs/`、`seed-cache/`）均在
-> `.gitignore`，公开克隆体积保持轻量，仅含配方/源码/文档。
+> 仓库大体积构建产物 `.build-ref/`、`dist/`、`logs/`、`seed-cache/` 均进 `.gitignore`，
+> 公开克隆体积保持轻量，仅含配方/源码/文档。
 
 ---
 
@@ -55,33 +49,36 @@
 
 ```
 FireworksRecipes/
-├── versions.conf        # ★ 全局版本锁（所有源码/依赖 pin，构建参数唯一来源）
+├── versions.conf        # ★ 全局版本锁：所有源码/依赖 pin，构建参数唯一来源
 ├── LICENSE / NOTICE.md  # Apache-2.0 许可与第三方来源声明
 ├── scripts/
 │   ├── build.sh         # 本地源码编译驱动（base / model / all）
-│   ├── bench/           # 基准 harness：bench_decode.py / bench_prefill.py（同口径对比）
-│   └── deploy/          # 真机双节点部署：deploy_v0260.sh（编排）+ run_vllm_node.sh（单节点）
+│   ├── bench/           # 基准 harness：bench_decode.py / bench_prefill.py
+│   └── deploy/          # 真机双节点部署：deploy_v0260.sh + run_vllm_node.sh
 ├── docker/
 │   └── vllm-b12x.Dockerfile   # 多阶段源码编译：flashinfer / vllm / deepgemm / nccl → runner
 ├── overlay/
-│   └── vllm/            # ★ vLLM 源码层覆写（Anemll 配方定向移植，构建期 rsync 进源码烘培进 wheel）
+│   └── vllm/            # ★ vLLM 源码层覆写，Anemll 配方定向移植，构建期 rsync 烘培进 wheel
 ├── docs/
 │   ├── README.en.md           # 英文文档
 │   └── BENCHMARK-v0260.md     # 真机双节点基准结果与对比
 └── recipes/
-    ├── index.json                  # ★ 目录清单（manifest，商店数据源）
-    └── deepseek-v4-flash-0731/
-        ├── build.conf              # 模型构建定义（镜像名 / base tag / 模型 id）
-        ├── Dockerfile.model        # ★ 专属镜像层：烘培补丁 + 调优 ENV（由模板渲染）
-        ├── fireworks.recipe.json   # ★ Fireworks 原生配方（可被仓库加载直读）
-        ├── README.md / README.en.md
-        └── patches/
-            ├── hybrid-draft-loader/   # 自研补丁：目标 instanttensor / 草稿 lazy safetensors
-            └── fw-warmup/             # 自研补丁：NVIDIA mHC warmup no-op 修复 + sparse MLA 覆盖
+    ├── index.json                  # ★ 目录清单，商店数据源
+    ├── deepseek-v4-flash-0731/
+    │   ├── build.conf              # 模型构建定义：镜像名 / base tag / 模型 id
+    │   ├── Dockerfile.model        # ★ 专属镜像层：烘培补丁 + 调优 ENV，由模板渲染
+    │   ├── fireworks.recipe.json   # ★ Fireworks 原生配方
+    │   ├── README.md / README.en.md
+    │   └── patches/
+    │       ├── hybrid-draft-loader/   # 自研补丁：instanttensor 下草稿 lazy safetensors
+    │       └── fw-warmup/             # 自研补丁：NVIDIA mHC warmup no-op 修复 + sparse MLA 覆盖
+    └── deepseek-v4-flash-dspark/
+        ├── fireworks.recipe.json
+        └── README.md / README.en.md
 ```
 
-> 升级 vLLM 版本：改 `versions.conf`（版本锁）后，按需同步 `overlay/vllm/`
-> 的源码覆写（版本漂移时 overlay 内锚点会硬失败提示），再 `./scripts/build.sh base && model`。
+> 升级 vLLM 版本：改 `versions.conf` 后，按需同步 `overlay/vllm/` 的源码覆写（版本漂移时
+> overlay 内锚点会硬失败提示），再 `./scripts/build.sh base && model`。
 
 ---
 
@@ -93,36 +90,36 @@ FireworksRecipes/
 
 | 阶段 | 内容 |
 |---|---|
-| `base` | CUDA 13 devel + 编译依赖 + PyTorch(cu130) + **NCCL 源码编译**(sm_121 gencode) |
-| `flashinfer` | FlashInfer 源码编译（commit 0472b9b≈0.6.15；cubin 默认跳过走运行时 JIT） |
-| `vllm` | 主流 vLLM v0.26.0（含 DeepGEMM）Rust 前端源码编译 wheel；**构建期 rsync `overlay/vllm/` 源码覆写烘培进 wheel** |
+| `base` | CUDA 13 devel + 编译依赖 + PyTorch(cu130) + **NCCL 源码编译**（sm_121 gencode） |
+| `flashinfer` | FlashInfer 源码编译，commit 0472b9b ≈ 0.6.15；cubin 默认跳过，走运行时 JIT |
+| `vllm` | 主流 vLLM v0.26.0 含 DeepGEMM，Rust 前端源码编译 wheel；**构建期 rsync `overlay/vllm/` 源码覆写烘培进 wheel** |
 | `runner` | 运行镜像：安装全部 wheel + `ray / fastsafetensors / instanttensor` + b12x(SparkInfer) 源码安装 + NCCL 顺序修复 |
 
-所有版本都集中在 `versions.conf`，脚本以 `--build-arg` 显式传入。
+所有版本集中在 `versions.conf`，脚本以 `--build-arg` 显式传入。
 
 ### 2. 专属模型层（`recipes/<id>/Dockerfile.model`）
 
 在基础 runner 之上，构建期烘培：
 
 - **补丁**：
-  - `hybrid-draft-loader` —— 把「`--load-format instanttensor` 时，同 checkpoint 内嵌的
-    dspark/MTP 投机草稿改为 lazy safetensors 加载」写入已安装的 vLLM wheel（AST 校验 + 幂等）。
+  - `hybrid-draft-loader` —— 把「`--load-format instanttensor` 时同 checkpoint 内嵌的
+    dspark/MTP 投机草稿改为 lazy safetensors 加载」写入已安装的 vLLM wheel，AST 校验 + 幂等。
   - `fw-warmup` —— 修复 NVIDIA 路径 mHC warmup no-op（启动即编译全部变体，消除推理期
     JIT 编译导致的 OOM）；sparse MLA warmup 覆盖提升到 8192。
 - **调优 ENV**：GB10 主路径专用环境变量（`PYTORCH_CUDA_ALLOC_CONF` /
-  `VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS` / `TILELANG_CACHE_DIR` 等，镜像内默认，配方
-  environment 层可覆盖）。
+  `VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS` / `TILELANG_CACHE_DIR` 等），镜像内默认，
+  配方 environment 层可覆盖。
 - 元数据 `FW_MODEL_ID` + OCI LABEL。
 
-> **权重不打包进镜像**（DeepSeek-V4-Flash-0731 约 167GB）。权重走 Fireworks 模型管理
-> （管理网下载 → head → RoCE 同步 → 各节点 HF 缓存），镜像内 `HF_HUB_OFFLINE=1` 离线加载。
+> **权重不打包进镜像**，DeepSeek-V4-Flash-0731 约 167GB；权重走 Fireworks 模型管理
+> 分发（管理网下载 → head → RoCE 同步 → 各节点 HF 缓存），镜像内 `HF_HUB_OFFLINE=1`
+> 离线加载。
 
-### 3. 配方（`recipe/fireworks.recipe.json`）
+### 3. 配方（`recipes/<id>/fireworks.recipe.json`）
 
-严格对齐 Fireworks 原生 `POST /api/recipes/import` schema
-（`name / description / image / compose_template / variables[]`）。
+严格对齐 Fireworks 原生 `POST /api/recipes/import` schema。
 
-- `image` 字段 = `build.sh` 产出的专属镜像 tag（脚本会校验一致）。
+- `image` 字段 = `build.sh` 产出的专属镜像 tag，脚本会校验一致。
 - `compose_template` 使用 v0.26.0 主路径 `vllm serve` 参数（nvfp4_ds_mla / dspark 投机 /
   MoE auto / instanttensor）+ 多节点分布式参数（`--distributed-executor-backend mp`，
   worker 自动 `--headless`）。
@@ -134,11 +131,11 @@ FireworksRecipes/
 ### 前置条件
 
 - **linux/arm64**（aarch64）构建机：DGX Spark 本机或同架构构建机
-- Docker ≥ 23（BuildKit，`mount=type=cache`） + compose v2
+- Docker ≥ 23（BuildKit，`mount=type=cache`）+ compose v2
 - 能访问 GitHub / HuggingFace（源码编译需拉取组件仓库）
-- 磁盘充足（编译 vLLM/Rust/FlashInfer，建议预留 ≥ 100GB）
+- 磁盘充足：编译 vLLM/Rust/FlashInfer，建议预留 ≥ 100GB
 
-> ⚠️ 首次源码编译耗时较长（数小时量级）。日志落盘在 `logs/`，各组件版本全部可参数化。
+> ⚠️ 首次源码编译耗时较长，数小时量级；日志落盘在 `logs/`，各组件版本全部可参数化。
 
 ### 1) 编译基础 runner
 
@@ -152,19 +149,19 @@ FireworksRecipes/
 # base 已存在时只会构建模型层；--push-registry 推送到你的 registry
 ./scripts/build.sh model --model deepseek-v4-flash-0731 --push-registry ghcr.io/<org>
 
-# 或导出 tar 归档（Fireworks 镜像管理 docker load 路线）
+# 或导出 tar 归档，Fireworks 镜像管理 docker load 路线
 ./scripts/build.sh model --model deepseek-v4-flash-0731 --save dist/
 
-# 可选：bake JIT 缓存种子进镜像（服务节点跑全量 warmup 生成 vllm-cache 后）
-#   SEED_CACHE_DIR=seed-cache bash scripts/build.sh model
-#   使新节点上线零推理期 JIT 编译（见 docs/BENCHMARK-v0260.md 追加3）。
+# 可选：bake JIT 缓存种子进镜像（服务节点跑全量 warmup 生成 vllm-cache 后），
+# 使新节点上线零推理期 JIT 编译（见 docs/BENCHMARK-v0260.md 追加3）
+SEED_CACHE_DIR=seed-cache bash scripts/build.sh model
 ```
 
 ### 3) 在 Fireworks 中运行（WebUI 全流程）
 
 1. **镜像页**：拉取专属镜像或导入 `--save` 归档 → 自动分发到节点。
-2. **配方页**：导入 `recipes/deepseek-v4-flash-0731/recipe/fireworks.recipe.json`。
-3. **发布任务**：选该配方 → 选集群（**≥2 节点，head 设为 rank0**，TP=2）→ 发布。
+2. **配方页**：导入 `recipes/deepseek-v4-flash-0731/fireworks.recipe.json`。
+3. **发布任务**：选该配方 → 选集群（≥2 节点，head 设为 rank0，TP=2）→ 发布。
 4. Fireworks 自动分发模型 → worker 先起、head 后起 → 健康检查轮询 `:8000/v1/models` 就绪。
 
 ### 4) 推理验证
@@ -183,26 +180,24 @@ curl -s http://<head-ip>:8000/v1/chat/completions \
 python3 scripts/bench/bench_decode.py  --base-url http://<head-ip>:8000/v1 --model deepseek-v4-flash-0731 --concurrency 1,2,4 --max-tokens 128
 python3 scripts/bench/bench_prefill.py --base-url http://<head-ip>:8000/v1 --model deepseek-v4-flash-0731 --sizes 1024,2048,4096,8192,16384
 
-# 真机双节点部署（TP=2；先起 worker → 后起 head → 健康检查轮询）
-# 默认含长上下文 JIT 形状预热（32K..1M，防推理期新形状编译 OOM；WARMUP=0 跳过）。
+# 真机双节点部署（TP=2）：先起 worker → 后起 head → 健康检查轮询
+# 默认含长上下文 JIT 形状预热（32K..1M），防推理期新形状编译 OOM；WARMUP=0 跳过。
 # 宿主建议预配 32GiB swap（/swapfile + fstab）作为编译峰值兜底。
 HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
-#   （0.3.0+：docker run 前自动把镜像内 JIT 缓存种子幂等灌入宿主挂载盘，全新节点零推理期编译）
+# 0.3.0+：docker run 前自动把镜像内 JIT 缓存种子幂等灌入宿主挂载盘，全新节点零推理期编译
 
-# 单节点启动（供手动/排障）——MASTER_ADDR 需容器内可解析的 head 地址：
+# 单节点启动（供手动/排障），MASTER_ADDR 需容器内可解析的 head 地址：
 ./scripts/deploy/run_vllm_node.sh <ip> <rank> <headless:0|1> [IMAGE]
 ```
 
 > 提示：deploy 脚本的节点地址、各 bench 脚本的 base-url 均可用环境变量覆盖；默认值
-> 以 `<head-ip>`/`<worker-ip>` 占位（见各脚本头部注释）。
+> 以 `<head-ip>`/`<worker-ip>` 占位，见各脚本头部注释。
 
 ---
 
 ## 实测结果概览（v0.26.0 主路径 · 双节点 DGX Spark TP=2）
 
 完整实测数据、调试历程与各版本对比见 **[docs/BENCHMARK-v0260.md](./docs/BENCHMARK-v0260.md)**。
-
-要点：
 
 | 项 | 结果 |
 |---|---|
@@ -226,7 +221,7 @@ HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
 
 - **0.3.0**（当前）——vLLM v0.26.0 主路径 + fw-warmup 补丁 + JIT 缓存 bake 进镜像。
 - **0.2.0**——迁移到主流 vLLM v0.26.0（Anemll 式 GB10 overlay、nvfp4_ds_mla KV、1M 上下文）。
-- **0.1.0**——早期自定义 b12x fork 栈（历史存档，已废弃，详见 older git history / 排障表）。
+- **0.1.0**——早期自定义 b12x fork 栈，已废弃（详见 older git history / 排障表）。
 
 升级路径：`./scripts/build.sh base && ./scripts/build.sh model`（base 0.2.0 + model 0.3.0）。
 
@@ -235,8 +230,10 @@ HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
 ## 新增一个模型
 
 1. 复制目录：`cp -r recipes/deepseek-v4-flash-0731 recipes/<new-model>`
-2. 改 `build.conf`：`MODEL_NAME / MODEL_ID / IMAGE_REPO / IMAGE_TAG `（及 `MODEL_PATCH_DIRS / MODEL_LABEL_*`）
-3. 运行 `bash scripts/render-model-dockerfile.sh <new-model>` 生成 `Dockerfile.model`（烘培补丁 + 调优 ENV）
+2. 改 `build.conf`：`MODEL_NAME / MODEL_ID / IMAGE_REPO / IMAGE_TAG`（及
+   `MODEL_PATCH_DIRS / MODEL_LABEL_*`）
+3. 运行 `bash scripts/render-model-dockerfile.sh <new-model>` 生成 `Dockerfile.model`
+   （烘培补丁 + 调优 ENV）
 4. 改 `fireworks.recipe.json`：默认 `image`、`DSPARK_MODEL` 默认值、必要参数
 5. 有新补丁就放 `recipes/<new-model>/patches/<name>/`，并在 `templates/patches/<name>.inc` 登记
 
@@ -262,15 +259,15 @@ HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
 
 ---
 
-## 许可与致谢
+## 参考来源与致谢
 
 本项目采用 **Apache-2.0**（见 [`LICENSE`](./LICENSE)）；第三方来源与派生关系见
 [`NOTICE.md`](./NOTICE.md)。
 
-参考与致谢：
-- [vllm-project/vllm](https://github.com/vllm-project/vllm)（v0.26.0，源代码编译基座）
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10)（GB10 性能配方与 attention overlay 移植）
-- [lukealonso/b12x](https://github.com/lukealonso/b12x)（MXFP4 MoE 内核，独立安装）
-- [jvr0x/dgx-spark-bench](https://github.com/jvr0x/dgx-spark-bench) 与
-  [tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark)
-  （1M/NVFP4 双节点配方参考）
+参考来源：
+- [vllm-project/vllm](https://github.com/vllm-project/vllm)：v0.26.0，源码编译基座
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10)：GB10 性能配方与 attention overlay 移植
+- [lukealonso/b12x](https://github.com/lukealonso/b12x)：MXFP4 MoE 内核，独立安装
+- [jvr0x/dgx-spark-bench](https://github.com/jvr0x/dgx-spark-bench)：1M/NVFP4 双节点配方参考
+- [tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark)：1M/NVFP4 双节点配方参考
+- [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)：DSpark 双节点配方路线参考
