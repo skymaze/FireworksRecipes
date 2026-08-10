@@ -2,7 +2,7 @@
 
 Serves **DeepSeek-V4-Flash-0731** on **exactly 2** DGX Spark nodes (head + 1 worker over RoCE):
 
-- Image: `fireworks-models/deepseek-v4-flash-0731:0.3.1` (mainline vLLM v0.26.0 + a
+- Image: `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` (mainline vLLM v0.26.0 + a
   GB10-targeted overlay; patches and tuned ENV baked at build time)
 - Topology: **fixed 2 nodes · TP=2**
 - Loading: InstantTensor + dspark speculative decoding (MTP=5)
@@ -18,7 +18,7 @@ Before publishing from Fireworks:
 
 - Cluster: **exactly 2** nodes (head + 1 worker), RoCE configured and tested.
 - Model: `deepseek-ai/DeepSeek-V4-Flash-0731` distributed to the nodes.
-- Image: `fireworks-models/deepseek-v4-flash-0731:0.3.1` pulled.
+- Image: `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` pulled.
 
 > The node count is locked at **exactly 2** (model parameters are tuned for it);
 > model/image pickers select ready items and prompt you to distribute anything missing.
@@ -28,7 +28,7 @@ Before publishing from Fireworks:
 | Variable | Default | Notes |
 |---|---|---|
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | Downloaded model |
-| `VLLM_IMAGE` | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | Pulled image |
+| `VLLM_IMAGE` | `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` | Pulled image |
 | `TENSOR_PARALLEL_SIZE` | `2` | Fixed 2 (1 GPU per GB10 node) |
 | `MAX_MODEL_LEN` | `1048576` | 1M context; needs `nvfp4_ds_mla` KV |
 | `GPU_MEMORY_UTILIZATION` | `0.88` | 1M context needs ≥0.88 |

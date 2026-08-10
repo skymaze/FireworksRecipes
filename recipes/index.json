@@ -16,7 +16,7 @@
       "context_length": 1048576,
       "modality": "text",
       "nodes": 2,
-      "image": "fireworks-models/deepseek-v4-flash-0731:0.3.1",
+      "image": "ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1",
       "tags": [
         "gb10",
         "dspark",

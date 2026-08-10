@@ -3,15 +3,7 @@ name: ci
 on:
   push:
     branches: ['main']
-    tags: ['v*']
   pull_request:
-  workflow_dispatch:
-
-env:
-  # 镜像仓库（登录用 secret；如 GHCR：ghcr.io/<owner>/fireworks-models）
-  REGISTRY: ${{ secrets.REGISTRY || 'ghcr.io' }}
-  REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
-  REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
 
 jobs:
   # ---------- 校验（轻量，任意平台） ----------
@@ -28,33 +20,4 @@ jobs:
             name="$(basename "$m")"
             # 只对带 build.conf 且模板生成的自建模型做 --check
             [ -f "$m/build.conf" ] && [ -d "templates/patches" ] && bash scripts/render-model-dockerfile.sh --check "$name"
-          done
-
-  # ---------- 镜像构建（需 arm64 自建 runner + registry 凭据） ----------
-  build:
-    # 自建 arm64 结点（如 DGX Spark 之一）承载：本地源码编译 vLLM/overlay 无法在
-    # x86/模拟器上以可接受时长完成。见 CONTRIBUTING.md「CI 与镜像构建」。
-    runs-on: [self-hosted, linux, arm64]
-    if: (github.event_name == 'workflow_dispatch') || startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/checkout@v4
-      - name: 登录镜像仓库
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_TOKEN }}
-      - name: 校验
-        run: python3 scripts/validate.py
-      - name: 构建并推送 base
-        run: bash scripts/build.sh base --push-registry "${{ env.REGISTRY }}"
-      - name: 构建并推送各模型专属镜像
-        run: |
-          set -e
-          for m in recipes/*/; do
-            name="$(basename "$m")"
-            [ -f "recipes/$name/build.conf" ] && {
-              echo "===== 构建 model: $name ====="
-              bash scripts/build.sh model --model "$name" --push-registry "${{ env.REGISTRY }}"
-            } || true
           done

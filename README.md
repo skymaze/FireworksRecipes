@@ -13,7 +13,7 @@
 
 | 模型 | 镜像 tag | 说明 |
 |---|---|---|
-| DeepSeek-V4-Flash-0731 | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | 双节点 TP=2 · vLLM v0.26.0 主路径 + GB10 定向 overlay · InstantTensor + dspark 投机 MTP=5 · KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM · fw-warmup 补丁 + JIT 缓存 bake，上线零推理期编译 |
+| DeepSeek-V4-Flash-0731 | `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` | 双节点 TP=2 · vLLM v0.26.0 主路径 + GB10 定向 overlay · InstantTensor + dspark 投机 MTP=5 · KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM · fw-warmup 补丁 + JIT 缓存 bake，上线零推理期编译 |
 | DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 双节点 TP=2 DSpark 服务，由 Fireworks 原内置配方迁移而来 · FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文 |
 
 > **拓扑固定**：所有配方均声明**确切的节点数**，如 2 节点 · TP=2；发布时必须恰好匹配，

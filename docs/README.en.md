@@ -16,7 +16,7 @@ for **Fireworks** (a DGX Spark cluster management tool).
 
 | Model | Image tag | Notes |
 |---|---|---|
-| DeepSeek-V4-Flash-0731 | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | 2-node TP=2 · mainline vLLM v0.26.0 + GB10-targeted overlay · InstantTensor + dspark speculative MTP=5 · KV=nvfp4_ds_mla · 1M context · MoE=auto/DeepGEMM · fw-warmup patch + baked JIT cache (zero inference-time compilation) |
+| DeepSeek-V4-Flash-0731 | `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` | 2-node TP=2 · mainline vLLM v0.26.0 + GB10-targeted overlay · InstantTensor + dspark speculative MTP=5 · KV=nvfp4_ds_mla · 1M context · MoE=auto/DeepGEMM · fw-warmup patch + baked JIT cache (zero inference-time compilation) |
 | DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 2-node TP=2 DSpark serving, migrated from Fireworks' former built-in recipe · FlashInfer b12x + dspark speculation · NVFP4 DS-MLA · 1M context |
 
 > **Fixed topology**: every recipe declares an **exact node count**, e.g. 2 nodes · TP=2.

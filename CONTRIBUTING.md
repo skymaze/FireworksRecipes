@@ -51,6 +51,8 @@ bash scripts/render-model-dockerfile.sh --check deepseek-v4-flash-0731   # Docke
 
 ## CI 与镜像构建
 
-- `.github/workflows/ci.yml` 的 `validate` 在任意 PR/push 上跑（零依赖）。
-- `build` 任务仅在打 `v*` tag 或手动触发时运行，**需要自建 arm64 runner**（`[self-hosted, linux, arm64]`，如一台 DGX Spark）：本地源码编译 vLLM+overlay 在 x86/模拟器上不现实。仓库登录凭据走 secrets `REGISTRY(_USER/_TOKEN)`（默认 `ghcr.io`）。
-- 也支持完全本地：`SEED_CACHE_DIR=seed-cache bash scripts/build.sh base` → `bash scripts/build.sh model --model <name> --push-registry <registry>`。
+- `.github/workflows/ci.yml` 的 `validate` 在任意 PR/push 上跑（零依赖）；镜像构建/推送**不走 CI**。
+- 镜像构建/推送到 registry 在本地 aarch64（DGX Spark / GB10）构建机完成：
+  `SEED_CACHE_DIR=seed-cache bash scripts/build.sh base` →
+  `bash scripts/build.sh model --model <name> --push-registry <registry>`。
+  例如推送本配方到 GHCR：`bash scripts/build.sh model --model deepseek-v4-flash-0731 --push-registry ghcr.io/skymaze`（需先 `docker login ghcr.io`）。

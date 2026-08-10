@@ -3,7 +3,7 @@
 在 Fireworks 中用 **2 台 DGX Spark**（head + 1 worker，RoCE 组网）跑起
 **DeepSeek-V4-Flash-0731**：
 
-- 镜像：`fireworks-models/deepseek-v4-flash-0731:0.3.1`（主流 vLLM v0.26.0 + GB10 定向
+- 镜像：`ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1`（主流 vLLM v0.26.0 + GB10 定向
   overlay，构建期烘培补丁与调优 ENV）
 - 拓扑：**固定 2 节点 · TP=2**
 - 加载：InstantTensor + dspark 投机（MTP=5）
@@ -18,7 +18,7 @@
 
 - 集群：**恰好 2 台**节点（head + 1 worker），已配置并测试 RoCE。
 - 模型：`deepseek-ai/DeepSeek-V4-Flash-0731` 已分发到节点。
-- 镜像：`fireworks-models/deepseek-v4-flash-0731:0.3.1` 已拉取。
+- 镜像：`ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` 已拉取。
 
 > 节点数锁定为**恰好 2**（模型参数按此调优）；模型/镜像下拉自动选已就绪项，缺失时提示先发送。
 
@@ -27,7 +27,7 @@
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | 已下载模型 |
-| `VLLM_IMAGE` | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | 已拉取镜像 |
+| `VLLM_IMAGE` | `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` | 已拉取镜像 |
 | `TENSOR_PARALLEL_SIZE` | `2` | 固定 2（GB10 每机 1 GPU） |
 | `MAX_MODEL_LEN` | `1048576` | 1M 上下文，需 `nvfp4_ds_mla` KV |
 | `GPU_MEMORY_UTILIZATION` | `0.88` | 1M 上下文需 ≥0.88 |
