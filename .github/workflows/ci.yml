@@ -19,5 +19,7 @@ jobs:
           for m in recipes/*/; do
             name="$(basename "$m")"
             # 只对带 build.conf 且模板生成的自建模型做 --check
-            [ -f "$m/build.conf" ] && [ -d "templates/patches" ] && bash scripts/render-model-dockerfile.sh --check "$name"
+            if [ -f "$m/build.conf" ] && [ -d "templates/patches" ]; then
+              bash scripts/render-model-dockerfile.sh --check "$name"
+            fi
           done
