@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # =============================================================================
-#  Dockerfile.model —— DeepSeek-V4-Flash-0731 专属服务镜像层
+#  Dockerfile.model —— __TITLE__ 专属服务镜像层
 #
 #  ★ 本文件由 scripts/render-model-dockerfile.sh 从 templates/Dockerfile.model
 #    生成（补丁列表/元数据来自 models/<model>/build.conf）；请勿手改，直接改
@@ -23,27 +23,7 @@ ARG BASE_IMAGE=fireworks-models/base-vllm-b12x:0.2.0
 FROM ${BASE_IMAGE}
 ARG BASE_IMAGE
 
-# 1) 烘培 vLLM 混合加载补丁
-#    --load-format instanttensor 时，同 checkpoint 内的 dspark 投机草稿改走
-#    lazy safetensors（避免对整份权重做第二次 InstantTensor 流式拷贝）。
-#    run.sh 为纯文件级 Python 补丁：AST 校验 + 幂等，构建期安全。
-#    锚点已对齐 v0.26.0 的 get_model（签名逐字节一致），--check 通过即可复用。
-COPY patches/hybrid-draft-loader /opt/fw/patches/hybrid-draft-loader
-RUN set -eux; \
-    cd /opt/fw/patches/hybrid-draft-loader && bash run.sh; \
-    rm -rf /opt/fw/patches/hybrid-draft-loader
-
-# 1.5) 烘培 fw-warmup 补丁（NVIDIA/DGX Spark mHC warmup no-op 修复 + sparse MLA 覆盖）
-#      根因（2026-08-05 长上下文 OOM）：deepseek_v4_mhc_warmup 的属性检查要求
-#      hc_pre/hc_post（仅 AMD/XPU 有），NVIDIA 层没有 → 启动从不预热首层 broadcast
-#      变体（mhc_pre_big_fuse_broadcast_with_norm_tilelang）→ 首个长请求推理期
-#      JIT 编译 → 峰值内存 OOM。补丁让 NVIDIA 层直接调 tilelang 内核预热全部变体，
-#      并把 _SPARSE_MLA_MIXED_WARMUP_TOKENS 16→8192。纯文件级 Python 补丁（AST 校验
-#      + 幂等），锚点漂移时拒绝打补丁（构建失败）而非静默打坏。
-COPY patches/fw-warmup /opt/fw/patches/fw-warmup
-RUN set -eux; \
-    cd /opt/fw/patches/fw-warmup && bash run.sh; \
-    rm -rf /opt/fw/patches/fw-warmup
+__PATCHES__
 
 # 2) 烘培该模型调优环境变量（v0.26.0 主路径 / GB10 专用；配方 environment 层可覆盖）
 #    注：fork 时代变量（VLLM_USE_B12X_WO_PROJECTION/_MHC/_FP8_GEMM/_SPARSE_INDEXER、
@@ -65,13 +45,13 @@ ENV FW_HYBRID_DRAFT_LOADER=auto \
     VLLM_USE_FLASHINFER_SAMPLER=1 \
     VLLM_SPARSE_INDEXER_MAX_LOGITS_MB=256 \
     DG_JIT_NVCC_COMPILER=/usr/local/cuda/bin/nvcc
-
+__EXTRA_ENV__
 # 3) 模型元数据
-ENV FW_MODEL_ID=deepseek-ai/DeepSeek-V4-Flash-0731
-LABEL org.opencontainers.image.title="Fireworks DeepSeek-V4-Flash-0731" \
-      org.opencontainers.image.description="Dedicated serving image for deepseek-ai/DeepSeek-V4-Flash-0731 (mainline vLLM v0.26.0 + GB10 overlay)" \
+ENV FW_MODEL_ID=__FW_MODEL_ID__
+LABEL org.opencontainers.image.title="__LABEL_TITLE__" \
+      org.opencontainers.image.description="__LABEL_DESC__" \
       org.opencontainers.image.base.name="${BASE_IMAGE}" \
-      fw.model="deepseek-ai/DeepSeek-V4-Flash-0731" \
+      fw.model="__FW_MODEL_ID__" \
       fw.base="${BASE_IMAGE}"
 
 # 4) JIT 编译缓存 bake（0.3.0+）——同硬件（GB10/sm_121a）上由本镜像自身生成的
