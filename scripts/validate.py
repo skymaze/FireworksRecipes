@@ -172,6 +172,10 @@ def check_manifest() -> list[str]:
         elif iid in seen_ids:
             err_at(f"recipes[{i}].id「{iid}」重复")
         seen_ids.add(iid)
+        if not _is_str(it.get("name")) or not it.get("name"):
+            err_at(f"recipes[{i}] 缺少显示名「name」（商店卡片标题用）")
+        if "name_en" in it and not _is_str(it.get("name_en")):
+            err_at(f"recipes[{i}].name_en 必须为字符串")
         if not path:
             err_at(f"recipes[{i}] 缺少 path")
         elif path in seen_paths:

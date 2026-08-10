@@ -109,6 +109,7 @@
 | 字段 | 说明 |
 |---|---|
 | `id` / `provider` / `model` | 标识与厂商/模型 |
+| `name` / `name_en` | 显示名（主语言/英文；商店卡片标题用，缺省回退 `id`） |
 | `path` | `fireworks.recipe.json` 仓库内相对路径 |
 | `version` | 版本 |
 | `readme` / `readme_en` | 默认（中文）/英文 README 相对路径 |

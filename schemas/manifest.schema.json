@@ -15,10 +15,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "path", "version", "image", "nodes"],
+        "required": ["id", "name", "path", "version", "image", "nodes"],
         "additionalProperties": true,
         "properties": {
           "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "name_en": { "type": "string" },
           "provider": { "type": "string" },
           "model": { "type": "string" },
           "path": { "type": "string" },

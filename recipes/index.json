@@ -27,7 +27,9 @@
         "dedicated"
       ],
       "description": "DeepSeek-V4-Flash-0731 的专属镜像 + 双节点 TP=2 vLLM 服务（GB10 定向 overlay、InstantTensor 快速加载、dspark 投机、DS-MLA 量化 KV、1M 上下文）。固定 2 节点拓扑。",
-      "description_en": "Dedicated-image 2-node TP=2 vLLM serving for DeepSeek-V4-Flash-0731 (GB10-targeted overlay, InstantTensor fast load, dspark speculation, quantized DS-MLA KV, 1M context). Fixed 2-node topology."
+      "description_en": "Dedicated-image 2-node TP=2 vLLM serving for DeepSeek-V4-Flash-0731 (GB10-targeted overlay, InstantTensor fast load, dspark speculation, quantized DS-MLA KV, 1M context). Fixed 2-node topology.",
+      "name": "DeepSeek-V4-Flash-0731 专属镜像",
+      "name_en": "DeepSeek-V4-Flash-0731 (dedicated image)"
     },
     {
       "id": "deepseek-v4-flash-dspark",
@@ -51,7 +53,9 @@
         "1m-context"
       ],
       "description": "DeepSeek-V4-Flash 双节点 TP=2 DSpark 服务（Anemll 分发镜像，FlashInfer b12x + dspark 投机，NVFP4 DS-MLA）。固定 2 节点拓扑。",
-      "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash (Anemll distribution image, FlashInfer b12x + dspark speculation, NVFP4 DS-MLA). Fixed 2-node topology."
+      "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash (Anemll distribution image, FlashInfer b12x + dspark speculation, NVFP4 DS-MLA). Fixed 2-node topology.",
+      "name": "DeepSeek-V4-Flash DSpark",
+      "name_en": "DeepSeek-V4-Flash DSpark"
     }
   ]
 }
