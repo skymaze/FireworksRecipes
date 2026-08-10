@@ -5,7 +5,7 @@
 # 用法（由 deploy_v0260.sh 调用，或手动）：
 #   ./scripts/deploy/run_vllm_node.sh <ip> <rank> <headless:0|1> [image]
 #
-# 与 models/<model>/recipe/fireworks.recipe.json 的 v0.26.0 命令保持一致：
+# 与 recipes/<id>/fireworks.recipe.json 的 v0.26.0 命令保持一致：
 #   kv=fp8_ds_mla / --moe-backend flashinfer_b12x / dspark MTP / instanttensor /
 #   mp 分布式 / RoCE 4×100G env。容器直接以 `vllm serve` 作为 CMD（不经 bash -lc），
 #   规避上文 README 记录的 JSON 参数引号截断问题。

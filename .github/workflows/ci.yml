@@ -24,7 +24,7 @@ jobs:
       - name: Dockerfile.model 模板一致性（--check）
         run: |
           set -e
-          for m in models/*/; do
+          for m in recipes/*/; do
             name="$(basename "$m")"
             # 只对带 build.conf 且模板生成的自建模型做 --check
             [ -f "$m/build.conf" ] && [ -d "templates/patches" ] && bash scripts/render-model-dockerfile.sh --check "$name"
@@ -51,9 +51,9 @@ jobs:
       - name: 构建并推送各模型专属镜像
         run: |
           set -e
-          for m in models/*/; do
+          for m in recipes/*/; do
             name="$(basename "$m")"
-            [ -f "models/$name/build.conf" ] && {
+            [ -f "recipes/$name/build.conf" ] && {
               echo "===== 构建 model: $name ====="
               bash scripts/build.sh model --model "$name" --push-registry "${{ env.REGISTRY }}"
             } || true

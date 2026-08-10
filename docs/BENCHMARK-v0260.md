@@ -163,7 +163,7 @@ Out of memory: Killed process 1952195 (VLLM::Worker_TP)
    config hash+capture 形状集。
 
 ### 实施（v0.3.0）
-- **fw-warmup 补丁**（models/deepseek-v4-flash-0731/patches/fw-warmup/，Dockerfile.model
+- **fw-warmup 补丁**（recipes/deepseek-v4-flash-0731/patches/fw-warmup/，Dockerfile.model
   构建期 AST 校验+幂等应用）：
   - `deepseek_v4_mhc_warmup.py`：`_find_first_mhc_layer` 兼容 NVIDIA 层；新增 NVIDIA
     分支直接调 `mhc_pre_broadcast_tilelang`/`mhc_pre_tilelang`/`mhc_fused_post_pre_tilelang`/

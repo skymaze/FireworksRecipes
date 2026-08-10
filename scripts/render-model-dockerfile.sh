@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# render-model-dockerfile.sh —— 从模板渲染 models/<model>/Dockerfile.model
+# render-model-dockerfile.sh —— 从模板渲染 recipes/<id>/Dockerfile.model
 #
 # 用法：
 #   ./scripts/render-model-dockerfile.sh <model>        # 生成并写入
 #   ./scripts/render-model-dockerfile.sh --check <model> # 校验生成==已提交（CI）
 #
-# 数据来源 = models/<model>/build.conf（与 scripts/build.sh 同源 source）：
+# 数据来源 = recipes/<id>/build.conf（与 scripts/build.sh 同源 source）：
 #   MODEL_PATCH_DIRS : 烘培进镜像的补丁目录列表（templates/patches/<dir>.inc）
 #   MODEL_ID         : HF 模型 id（ENV FW_MODEL_ID / LABEL fw.model）
 #   MODEL_LABEL_TITLE: 镜像 OCI title（缺省 "Fireworks ${MODEL_NAME}"）
@@ -33,7 +33,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$MODEL" ] || usage
 
-MODEL_DIR="$REPO/models/$MODEL"
+MODEL_DIR="$REPO/recipes/$MODEL"
 BC="$MODEL_DIR/build.conf"
 [ -f "$BC" ] || { echo "错误: 缺少 $BC" >&2; exit 2; }
 

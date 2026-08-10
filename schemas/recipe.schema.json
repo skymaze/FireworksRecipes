@@ -14,7 +14,6 @@
     "version": { "type": ["string", "null"] },
     "image": { "type": ["string", "null"] },
     "nodes": { "type": ["integer", "null"], "minimum": 1 },
-    "tensor_parallel": { "type": ["integer", "null"], "minimum": 1 },
     "compose_template": { "type": "string" },
     "variables": {
       "type": "array",

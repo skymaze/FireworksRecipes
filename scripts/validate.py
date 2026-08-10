@@ -15,7 +15,7 @@ FireworksRecipes 配方源校验脚本（零依赖，纯 stdlib）。
    - 描述字段若两边都有则必须一致。
 
 用法：  python3 scripts/validate.py            # 校验仓库全部配方 + manifest
-        python3 scripts/validate.py --recipe models/xxx/recipe/fireworks.recipe.json
+        python3 scripts/validate.py --recipe recipes/xxx/fireworks.recipe.json
         python3 scripts/validate.py --manifest recipes/index.json
 退出码：0 = 全部通过；1 = 存在错误。
 """
@@ -52,6 +52,17 @@ def _is_int(v): return isinstance(v, int) and not isinstance(v, bool)
 def _is_num(v): return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
+# 已废弃字段：曾经在 manifest/配方里出现过，现统一只保留 nodes（GB10 每机 1 GPU，
+# TP=节点数，且可能混合架构下无单一 dtype）。出现即报错。
+DEPRECATED_FIELDS = ("topology", "tensor_parallel", "dtype")
+
+
+def _check_deprecated(obj, rel, errors):
+    for k in DEPRECATED_FIELDS:
+        if k in obj:
+            errors.append(f"{rel}: 已废弃字段「{k}」（请移除；固定拓扑只用 nodes）")
+
+
 def check_recipe(rel: Path) -> list[str]:
     errors: list[str] = []
     src = (REPO / rel).read_text(encoding="utf-8")
@@ -61,6 +72,7 @@ def check_recipe(rel: Path) -> list[str]:
         return [f"{rel}: JSON 解析失败: {e}"]
 
     def err_at(msg): errors.append(f"{rel}: {msg}")
+    _check_deprecated(r, rel, errors)
 
     # 必填（name/compose_template 为字符串，variables 为数组）
     for f in ("name", "compose_template"):
@@ -137,6 +149,7 @@ def check_manifest() -> list[str]:
         return [f"recipes/index.json: JSON 解析失败: {e}"]
 
     def err_at(msg): errors.append(f"recipes/index.json: {msg}")
+    _check_deprecated(m, "recipes/index.json", errors)
 
     if m.get("schema") != 1:
         err_at("schema 必须为 1")
@@ -151,6 +164,7 @@ def check_manifest() -> list[str]:
     for i, it in enumerate(items):
         if not isinstance(it, dict):
             err_at(f"recipes[{i}] 不是对象"); continue
+        _check_deprecated(it, f"recipes/index.json entries[{i}]", errors)
         iid = it.get("id")
         path = it.get("path")
         if not iid:
@@ -166,9 +180,8 @@ def check_manifest() -> list[str]:
         for f in ("version", "image"):
             if not _is_str(it.get(f)):
                 err_at(f"recipes[{i}] 缺少字符串字段「{f}」")
-        for f in ("nodes", "tensor_parallel"):
-            if not _is_int(it.get(f)):
-                err_at(f"recipes[{i}] 缺少整数字段「{f}」")
+        if not _is_int(it.get("nodes")):
+            err_at(f"recipes[{i}] 缺少整数字段「nodes」")
 
         if not path:
             continue
@@ -182,9 +195,9 @@ def check_manifest() -> list[str]:
             recipe = json.loads(recipe_rel.read_text(encoding="utf-8"))
         except Exception:
             continue
-        # 重叠字段一致性（防双写漂移）：版本/镜像/固定拓扑必须一致；
-        # description(_en) 是「manifest=卡片文案 / recipe=完整说明」的有意分叉，不强校验。
-        for f in ("version", "image", "nodes", "tensor_parallel"):
+        # 重叠字段一致性（防双写漂移）：版本/镜像/固定节点数必须一致；
+        # topology/tensor_parallel/dtype 已废弃（validate 会单独拦截）。
+        for f in ("version", "image", "nodes"):
             mv, rv = it.get(f), recipe.get(f)
             if mv != rv:
                 err_at(f"recipes[{i}].{f}「{mv}」与 {path} 的「{rv}」不一致")
@@ -196,7 +209,7 @@ def check_manifest() -> list[str]:
 
 
 def all_recipe_files() -> list[Path]:
-    return sorted((REPO / "models").glob("*/recipe/fireworks.recipe.json"))
+    return sorted((REPO / "recipes").glob("*/fireworks.recipe.json"))
 
 
 def main() -> int:

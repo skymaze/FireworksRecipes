@@ -5,7 +5,7 @@ set -euo pipefail
 # scripts/build.sh —— 本地源码编译驱动（base / model / all）
 #
 #   base  编译基础 runner（docker/vllm-b12x.Dockerfile，全部组件本地源码编译）
-#   model 在 base 之上构建模型专属镜像（models/<model>/Dockerfile.model）
+#   model 在 base 之上构建模型专属镜像（recipes/<id>/Dockerfile.model）
 #   all   先 base 后 model
 #
 # 用法：
@@ -66,9 +66,9 @@ TARGET="${TARGET:-all}"
 # shellcheck disable=SC1091
 source "${REPO_ROOT}/versions.conf"
 
-MODEL_DIR="${REPO_ROOT}/models/${MODEL}"
+MODEL_DIR="${REPO_ROOT}/recipes/${MODEL}"
 if [[ ! -d "${MODEL_DIR}" ]]; then
-    fail "模型目录不存在: ${MODEL_DIR}（--model 指定 models/ 下的目录名）"
+    fail "模型目录不存在: ${MODEL_DIR}（--model 指定 recipes/ 下的目录名）"
 fi
 # shellcheck disable=SC1091
 source "${MODEL_DIR}/build.conf"
@@ -184,7 +184,7 @@ build_model() {
 # recipe.json.image 与最终 tag 一致性提示
 check_recipe_image() {
     local final_image="$1"
-    local recipe_file="${MODEL_DIR}/recipe/fireworks.recipe.json"
+    local recipe_file="${MODEL_DIR}/fireworks.recipe.json"
     [[ -f "${recipe_file}" ]] || return 0
     command -v python3 >/dev/null 2>&1 || return 0
     local recipe_image

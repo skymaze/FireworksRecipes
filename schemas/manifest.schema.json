@@ -15,7 +15,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "path", "version", "image", "nodes", "tensor_parallel"],
+        "required": ["id", "path", "version", "image", "nodes"],
         "additionalProperties": true,
         "properties": {
           "id": { "type": "string", "minLength": 1 },
@@ -26,12 +26,9 @@
           "readme_en": { "type": "string" },
           "version": { "type": "string" },
           "params": { "type": "string" },
-          "dtype": { "type": "string" },
           "context_length": { "type": ["integer", "null"] },
           "modality": { "type": "string" },
-          "topology": { "type": "string" },
           "nodes": { "type": "integer", "minimum": 1 },
-          "tensor_parallel": { "type": "integer", "minimum": 1 },
           "image": { "type": "string" },
           "tags": { "type": "array", "items": { "type": "string" } },
           "description": { "type": "string" },

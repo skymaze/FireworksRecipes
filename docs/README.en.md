@@ -35,7 +35,7 @@ FireworksRecipes/
 ├── docs/
 │   ├── README.en.md           # This document
 │   └── BENCHMARK-v0260.md     # 2-node benchmark results and comparison
-└── models/
+└── recipes/
     └── deepseek-v4-flash-0731/
         ├── build.conf
         ├── Dockerfile.model
@@ -58,7 +58,7 @@ Multi-stage, fully local build, **no third-party images/prebuilt artifacts**:
 
 All versions are pinned in `versions.conf`.
 
-### 2. Per-model layer (`models/<model>/Dockerfile.model`)
+### 2. Per-model layer (`recipes/<id>/Dockerfile.model`)
 
 - **Patches**: `hybrid-draft-loader` (draft model → lazy safetensors under instanttensor);
   `fw-warmup` (fix NVIDIA mHC warmup no-op + sparse MLA coverage → no inference-time JIT/OOM).

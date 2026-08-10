@@ -20,8 +20,7 @@
 | `description_en` | string | 否 | 英文描述（缺省回退 `description`） |
 | `version` | string | 否 | 配方/镜像版本（如 `0.3.1`；通常对齐专属镜像 tag） |
 | `image` | string | 否 | 默认镜像（可为空，由变量覆盖） |
-| `nodes` | int | 否 | **固定拓扑**：确切的节点数量（None=不固定）。每个配方按固定设备数调优，发布时须恰好匹配（不用 min/max 比较） |
-| `tensor_parallel` | int | 否 | 张量并行度（GB10 每机 1 GPU，通常 = 节点数；仅信息） |
+| `nodes` | int | 否 | **固定拓扑**：确切的节点数量（None=不固定）。每个配方按固定设备数调优，发布时须恰好匹配（不用 min/max 比较）。GB10 每机 1 GPU，TP=节点数，不另设 `tensor_parallel`/`topology`；也不设 `dtype`（可能混合架构） |
 | `compose_template` | string | ✅ | compose 模板（每节点一份，支持 `${VAR}` 占位符，`.env` 插值） |
 | `variables` | array | ✅ | 变量定义（见下表） |
 
@@ -80,7 +79,6 @@
   "version": "1.0.0",
   "image": "example/models:1.0.0",
   "nodes": 2,
-  "tensor_parallel": 2,
   "compose_template": "services:\n  app:\n    image: ${IMAGE:-example/models:1.0.0}\n    ...",
   "variables": [
     {
@@ -114,8 +112,8 @@
 | `path` | `fireworks.recipe.json` 仓库内相对路径 |
 | `version` | 版本 |
 | `readme` / `readme_en` | 默认（中文）/英文 README 相对路径 |
-| `params` / `dtype` / `context_length` / `modality` | 卡片元数据 |
-| `topology` / `nodes` / `tensor_parallel` | 固定拓扑 |
+| `params` / `context_length` / `modality` | 卡片元数据（不设 `dtype`：可能混合架构） |
+| `nodes` | 固定拓扑（发布时须恰好匹配） |
 | `image` / `tags` | 镜像与标签 |
 | `description` / `description_en` | 中英文描述 |
 
@@ -136,7 +134,7 @@
 
 ## 4. 提 PR 建议
 
-1. `models/<model>/recipe/fireworks.recipe.json` + `README.md`（+ 可选 `README.en.md`）
-2. 在 `recipes/index.json` 登记一条（含 `nodes/tensor_parallel`、`description(_en)`、`readme(_en)`）
+1. `recipes/<id>/recipe/fireworks.recipe.json` + `README.md`（+ 可选 `README.en.md`）
+2. 在 `recipes/index.json` 登记一条（含 `nodes`、`description(_en)`、`readme(_en)`；`image/version/nodes` 须与配方一致）
 3. 保持 `MASTER_ADDR=head_roce_ip` / `MASTER_PORT` 为用户变量等当前变量模型约定
 4. 大体积构建产物一律进 `.gitignore`，仓库保持轻量

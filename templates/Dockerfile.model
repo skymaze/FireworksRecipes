@@ -4,7 +4,7 @@
 #  Dockerfile.model —— __TITLE__ 专属服务镜像层
 #
 #  ★ 本文件由 scripts/render-model-dockerfile.sh 从 templates/Dockerfile.model
-#    生成（补丁列表/元数据来自 models/<model>/build.conf）；请勿手改，直接改
+#    生成（补丁列表/元数据来自 recipes/<id>/build.conf）；请勿手改，直接改
 #    build.conf + templates/patches/。CI 会执行 --check 防漂移。
 #
 #  与「单镜像 + 运行时打补丁」不同：本镜像在【构建期】把该模型所需的 vLLM 补丁

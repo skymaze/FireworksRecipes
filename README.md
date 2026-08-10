@@ -13,7 +13,7 @@
 
 | 模型 | 专属镜像 tag | 说明 |
 |---|---|---|
-| DeepSeek-V4-Flash-0731 | `fireworks-models/deepseek-v4-flash-0731:0.3.1` | 主流 vLLM v0.26.0 主路径 / Anemll 式 GB10 overlay / InstantTensor + dspark 投机 MTP=5 / 双节点 TP=2（KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM）· **fw-warmup 补丁（NVIDIA mHC warmup no-op 修复）+ JIT 缓存 bake（`/opt/fw/vllm-cache-seed`，上线零推理期编译）** |
+| DeepSeek-V4-Flash-0731 | `fireworks-recipes/deepseek-v4-flash-0731:0.3.1` | 主流 vLLM v0.26.0 主路径 / Anemll 式 GB10 overlay / InstantTensor + dspark 投机 MTP=5 / 双节点 TP=2（KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM）· **fw-warmup 补丁（NVIDIA mHC warmup no-op 修复）+ JIT 缓存 bake（`/opt/fw/vllm-cache-seed`，上线零推理期编译）** |
 | DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1`（分发镜像） | 双节点 TP=2 DSpark 服务（MiaAI-Lab 参考配方路线，FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文）。由 Fireworks 原内置配方迁移而来。**固定 2 节点拓扑** |
 
 > **拓扑固定**：所有配方均声明**确切的节点数**（manifest `nodes`/`tensor_parallel`，
@@ -32,10 +32,10 @@
 - `recipes/index.json` —— **目录清单（manifest，等同 recipes.vllm.ai 的 /models.json）**：
   每条列出 `id / provider / model / path / readme / version / params / dtype /
   context_length / modality / topology / image / tags`。Fireworks 只读它，**不做整树扫描**。
-- `models/<model>/recipe/fireworks.recipe.json` —— 可运行配方，字段对齐 Fireworks
+- `recipes/<id>/recipe/fireworks.recipe.json` —— 可运行配方，字段对齐 Fireworks
   `POST /api/recipes/import` schema（`name/description/image/compose_template/variables`），
   并带 `version`（对齐专属镜像 tag）。
-- `models/<model>/recipe/README.md` —— 介绍文档（用法 / 变量 / 性能 / 更新记录），
+- `recipes/<id>/recipe/README.md` —— 介绍文档（用法 / 变量 / 性能 / 更新记录），
   Fireworks「配方商店」详情里渲染。
 - **双向（可选）**：文本字段均可带英文并列字段 `xxx_en`（`name_en / description_en /
   label_en / help_en`）；README 可提供 `README.en.md`。Fireworks 按界面语言选择：
@@ -68,15 +68,16 @@ FireworksRecipes/
 ├── docs/
 │   ├── README.en.md           # 英文文档
 │   └── BENCHMARK-v0260.md     # 真机双节点基准结果与对比
-└── models/
+└── recipes/
+    ├── index.json                  # ★ 目录清单（manifest，商店数据源）
     └── deepseek-v4-flash-0731/
         ├── build.conf              # 模型构建定义（镜像名 / base tag / 模型 id）
-        ├── Dockerfile.model        # ★ 专属镜像层：烘培补丁 + 调优 ENV
-        ├── patches/
-        │   ├── hybrid-draft-loader/   # 自研补丁：目标 instanttensor / 草稿 lazy safetensors
-        │   └── fw-warmup/             # 自研补丁：NVIDIA mHC warmup no-op 修复 + sparse MLA 覆盖
-        └── recipe/
-            └── fireworks.recipe.json   # ★ Fireworks 原生配方（可被仓库加载直读）
+        ├── Dockerfile.model        # ★ 专属镜像层：烘培补丁 + 调优 ENV（由模板渲染）
+        ├── fireworks.recipe.json   # ★ Fireworks 原生配方（可被仓库加载直读）
+        ├── README.md / README.en.md
+        └── patches/
+            ├── hybrid-draft-loader/   # 自研补丁：目标 instanttensor / 草稿 lazy safetensors
+            └── fw-warmup/             # 自研补丁：NVIDIA mHC warmup no-op 修复 + sparse MLA 覆盖
 ```
 
 > 升级 vLLM 版本：改 `versions.conf`（版本锁）后，按需同步 `overlay/vllm/`
@@ -99,7 +100,7 @@ FireworksRecipes/
 
 所有版本都集中在 `versions.conf`，脚本以 `--build-arg` 显式传入。
 
-### 2. 专属模型层（`models/<model>/Dockerfile.model`）
+### 2. 专属模型层（`recipes/<id>/Dockerfile.model`）
 
 在基础 runner 之上，构建期烘培：
 
@@ -162,7 +163,7 @@ FireworksRecipes/
 ### 3) 在 Fireworks 中运行（WebUI 全流程）
 
 1. **镜像页**：拉取专属镜像或导入 `--save` 归档 → 自动分发到节点。
-2. **配方页**：导入 `models/deepseek-v4-flash-0731/recipe/fireworks.recipe.json`。
+2. **配方页**：导入 `recipes/deepseek-v4-flash-0731/recipe/fireworks.recipe.json`。
 3. **发布任务**：选该配方 → 选集群（**≥2 节点，head 设为 rank0**，TP=2）→ 发布。
 4. Fireworks 自动分发模型 → worker 先起、head 后起 → 健康检查轮询 `:8000/v1/models` 就绪。
 
@@ -233,11 +234,11 @@ HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
 
 ## 新增一个模型
 
-1. 复制目录：`cp -r models/deepseek-v4-flash-0731 models/<new-model>`
-2. 改 `build.conf`：`MODEL_NAME / MODEL_ID / IMAGE_REPO / IMAGE_TAG`
-3. 改 `Dockerfile.model`：烘培的补丁列表与调优 ENV
-4. 改 `recipe/fireworks.recipe.json`：默认 `image`、`DSPARK_MODEL` 默认值、必要参数
-5. 有新补丁就放 `models/<new-model>/patches/<name>/` 并在 Dockerfile 中 `COPY + RUN`
+1. 复制目录：`cp -r recipes/deepseek-v4-flash-0731 recipes/<new-model>`
+2. 改 `build.conf`：`MODEL_NAME / MODEL_ID / IMAGE_REPO / IMAGE_TAG `（及 `MODEL_PATCH_DIRS / MODEL_LABEL_*`）
+3. 运行 `bash scripts/render-model-dockerfile.sh <new-model>` 生成 `Dockerfile.model`（烘培补丁 + 调优 ENV）
+4. 改 `fireworks.recipe.json`：默认 `image`、`DSPARK_MODEL` 默认值、必要参数
+5. 有新补丁就放 `recipes/<new-model>/patches/<name>/`，并在 `templates/patches/<name>.inc` 登记
 
 ---
 
