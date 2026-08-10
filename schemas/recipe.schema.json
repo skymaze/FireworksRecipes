@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/skymaze/FireworksRecipes/schemas/recipe.schema.json",
+  "title": "Fireworks recipe (fireworks.recipe.json)",
+  "description": "单个模型配方文件格式，遵循 docs/RECIPE-FORMAT.md。",
+  "type": "object",
+  "required": ["name", "compose_template", "variables"],
+  "additionalProperties": true,
+  "properties": {
+    "name": { "type": "string" },
+    "name_en": { "type": "string" },
+    "description": { "type": ["string", "null"] },
+    "description_en": { "type": ["string", "null"] },
+    "version": { "type": ["string", "null"] },
+    "image": { "type": ["string", "null"] },
+    "nodes": { "type": ["integer", "null"], "minimum": 1 },
+    "tensor_parallel": { "type": ["integer", "null"], "minimum": 1 },
+    "compose_template": { "type": "string" },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key"],
+        "additionalProperties": true,
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" },
+          "label_en": { "type": "string" },
+          "help": { "type": "string" },
+          "help_en": { "type": "string" },
+          "type": { "enum": ["string", "int", "float", "bool", "select"] },
+          "source": { "enum": ["user", "cluster", "node"] },
+          "auto": { "type": ["string", "null"] },
+          "default": { "type": ["string", "number", "boolean", "null"] },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "required": { "type": "boolean" },
+          "picker": { "enum": ["", "model", "image"] },
+          "min": { "type": ["number", "null"] },
+          "max": { "type": ["number", "null"] }
+        }
+      }
+    }
+  }
+}

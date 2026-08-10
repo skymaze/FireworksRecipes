@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/skymaze/FireworksRecipes/schemas/manifest.schema.json",
+  "title": "Fireworks recipe catalog manifest (recipes/index.json)",
+  "description": "商店目录 manifest（Fireworks recipe_source 消费）。每条指向一个 fireworks.recipe.json 并携带卡片元数据；与配方文件重叠的字段（image/version/nodes/tensor_parallel）由 scripts/validate.py 做一致性校验。",
+  "type": "object",
+  "required": ["schema", "name", "recipes"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": { "type": "integer", "const": 1 },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "description_en": { "type": "string" },
+    "recipes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "version", "image", "nodes", "tensor_parallel"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "provider": { "type": "string" },
+          "model": { "type": "string" },
+          "path": { "type": "string" },
+          "readme": { "type": "string" },
+          "readme_en": { "type": "string" },
+          "version": { "type": "string" },
+          "params": { "type": "string" },
+          "dtype": { "type": "string" },
+          "context_length": { "type": ["integer", "null"] },
+          "modality": { "type": "string" },
+          "topology": { "type": "string" },
+          "nodes": { "type": "integer", "minimum": 1 },
+          "tensor_parallel": { "type": "integer", "minimum": 1 },
+          "image": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "description": { "type": "string" },
+          "description_en": { "type": "string" }
+        }
+      }
+    }
+  }
+}

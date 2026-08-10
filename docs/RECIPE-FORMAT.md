@@ -44,6 +44,31 @@
 > 语言约定：字段尽量提供主语言（zh）+ `.en` 并列字段；只写一种语言即可（Fireworks
 > 在加载时按界面语言选择，缺省回退存在的语言）。
 
+### 自动填充键（`source=cluster/node` 的 `auto` 取值）
+
+`auto` 取值只能是下表之一（与 Fireworks 后端 `recipe_render` 的自动变量一一对应；
+`scripts/validate.py` 会校验未知键，跨仓库新增键需同步下表与后端 renderer）：
+
+| auto 键 | source | 说明 |
+|---|---|---|
+| `head_roce_ip` | cluster | 当前任务 head 节点的 RoCE IP（填 `MASTER_ADDR`） |
+| `nodes_total` | cluster | 任务节点总数 |
+| `network_type` | cluster | 集群网络类型（roce/ib/ethernet） |
+| `head_ip` | cluster | head 节点管理网 IP |
+| `head_hostname` | cluster | head 节点主机名 |
+| `node_rank` | node | 任务内节点序号（head=0，worker 递增） |
+| `role` | node | 任务内角色（head / worker） |
+| `hostname` | node | 节点主机名 |
+| `node_ip` | node | 节点管理网 IP |
+| `node_roce_ip` | node | 首选 RoCE 口 IP（填 `VLLM_HOST_IP` 等） |
+| `hca` | node | 可用 RoCE HCA（逗号分隔，NCCL 多 rail，填 `NCCL_IB_HCA`） |
+| `netdev` | node | 首选 RoCE 口网卡名（填 `NCCL_SOCKET_IFNAME`） |
+| `gid_index` | node | RoCEv2 GID index（填 `NCCL_IB_GID_INDEX`） |
+| `agent_port` | node | 节点 agent 服务端口（9000） |
+| `headless` | node | head 为空、worker 为 "1"（worker 不跑 API server） |
+
+> `MASTER_PORT` 等分布式端口属**用户变量**（`source=user`，默认 25000），不作为自动键。
+
 ### 示例
 
 ```json
