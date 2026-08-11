@@ -1,9 +1,9 @@
 # Security Policy
 
-This project builds serving images for a **private cluster management tool**
-(Fireworks) running on DGX Spark nodes. It does not expose a public attack surface
-itself; security-sensitive behavior lives downstream in the generated vLLM serving
-processes and the cluster tool.
+This repository provides model **recipes** for a **private cluster management tool**
+(Fireworks) running on DGX Spark nodes. It contains no executable serving code itself;
+security-sensitive behavior runs downstream in the referenced vLLM serving images and the
+cluster tool.
 
 ## Reporting a vulnerability
 
@@ -13,8 +13,7 @@ GitHub org, or contact the maintainers directly).
 
 Please include:
 
-- affected component (Dockerfile / overlay patch / recipe / scripts),
-- the vLLM & dependency versions involved (`versions.conf`),
+- affected recipe / catalog entry,
 - a minimal reproduction if possible,
 - impact assessment.
 
@@ -23,15 +22,12 @@ upstream projects where relevant.
 
 ## Security notes for operators
 
-- **Do not commit credentials.** The scripts read node addresses and credentials
-  from environment variables; never bake passwords/tokens into images or recipes.
-- **Trusted model weights only.** Weights are loaded from HF caches on the nodes;
-  pin revisions and only use checkpoints you trust.
+- **Do not commit credentials.** The recipes read node addresses and credentials from
+  environment variables; never bake passwords/tokens into recipes.
+- **Trusted model weights only.** Weights are loaded from HF caches on the nodes; pin
+  revisions and only use checkpoints you trust.
 - **Network exposure:** vLLM serves on the host network (`0.0.0.0:8000`). Restrict
   access via your cluster network / firewall — do not expose the port to untrusted
   networks.
-- **Patch integrity:** all in-image patches are applied at build time with AST
-  validation (anchors must match exactly); a failure aborts the build rather than
-  silently altering code. Verify image digests when loading from a registry.
-- **Keep dependencies updated:** follow upstream advisories for vLLM / PyTorch /
-  FlashInfer / b12x and rebuild images when security fixes land upstream.
+- **Image provenance:** verify image digests when loading from a registry, and follow
+  upstream advisories for vLLM / PyTorch / FlashInfer / b12x.

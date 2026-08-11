@@ -8,10 +8,9 @@ Serves DeepSeek-V4-Flash on **exactly 2** DGX Spark nodes (head + 1 worker over 
 - Model: `deepseek-ai/DeepSeek-V4-Flash-0731` (~167 GB, distributed by Fireworks, loaded
   offline)
 
-> Difference from the "dedicated image" recipe `deepseek-v4-flash-0731`: this one uses the
-> Anemll distribution image to quickly try the dspark speculative path; the dedicated recipe
-> builds vLLM v0.26.0 with a GB10-targeted overlay and has better prefill (MoE=auto,
-> 2200+ tok/s). Pick whichever fits.
+> This recipe uses the Anemll prebuilt distribution image out of the box to try the
+> FlashInfer b12x + dspark speculative path at 1M context (NVFP4 DS-MLA). The repo also
+> ships a 4-node TP=4 DSpark recipe — pick by topology.
 
 ## Quick start
 

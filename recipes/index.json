@@ -5,32 +5,6 @@
   "description_en": "Fireworks recipe catalog. Each entry is a model recipe you can install and publish to a DGX Spark cluster with one click; nodes declare a fixed topology you must match exactly.",
   "recipes": [
     {
-      "id": "deepseek-v4-flash-0731",
-      "provider": "deepseek-ai",
-      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
-      "path": "recipes/deepseek-v4-flash-0731/fireworks.recipe.json",
-      "readme": "recipes/deepseek-v4-flash-0731/README.md",
-      "readme_en": "recipes/deepseek-v4-flash-0731/README.en.md",
-      "version": "0.3.1",
-      "params": "284B/13B",
-      "context_length": 1048576,
-      "modality": "text",
-      "nodes": 2,
-      "image": "ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1",
-      "tags": [
-        "gb10",
-        "dspark",
-        "speculative",
-        "vllm",
-        "1m-context",
-        "dedicated"
-      ],
-      "description": "DeepSeek-V4-Flash-0731 专属镜像 + 双节点 TP=2 vLLM 服务：GB10 定向 overlay、InstantTensor 快速加载、dspark 投机、DS-MLA 量化 KV、1M 上下文。",
-      "description_en": "Dedicated-image 2-node TP=2 vLLM serving for DeepSeek-V4-Flash-0731: GB10-targeted overlay, InstantTensor fast load, dspark speculation, quantized DS-MLA KV, 1M context.",
-      "name": "DeepSeek-V4-Flash vllm 0.26.0",
-      "name_en": "DeepSeek-V4-Flash vLLM 0.26.0"
-    },
-    {
       "id": "deepseek-v4-flash-dspark",
       "provider": "deepseek-ai",
       "model": "deepseek-ai/DeepSeek-V4-Flash-0731",

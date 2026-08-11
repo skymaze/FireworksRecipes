@@ -12,14 +12,14 @@ workers over RoCE) from Fireworks:
 - Defaults are pinned to what passed **real-hardware validation on an agentic workload**
   (k=5, `GPU_MEMORY_UTILIZATION=0.80`, `DEFAULT_THINKING=max`, 1M context).
 
-## How it differs from the two 2-node recipes
+## How it differs from the 2-node recipe
 
-| Axis | `deepseek-v4-flash-0731` | `deepseek-v4-flash-dspark` | **This recipe (TP=4)** |
-|---|---|---|---|
-| Topology | 2 nodes · TP=2 | 2 nodes · TP=2 | **4 nodes · TP=4** |
-| Image | self-built vLLM 0.26.0 (dedicated) | Anemll distribution | Anemll distribution |
-| Speculation | MTP=5 | k=5 | **k=5** (verified default) |
-| Context | 1M | 1M | **1M** |
+| Axis | `deepseek-v4-flash-dspark` | **This recipe (TP=4)** |
+|---|---|---|
+| Topology | 2 nodes · TP=2 | **4 nodes · TP=4** |
+| Image | Anemll distribution | Anemll distribution |
+| Speculation | k=5 | **k=5** (verified default) |
+| Context | 1M | **1M** |
 
 ## Quick start
 

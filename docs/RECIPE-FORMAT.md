@@ -18,7 +18,7 @@
 | `name_en` | string | 否 | 英文配方名（缺省回退 `name`） |
 | `description` | string | 否 | 主语言描述 |
 | `description_en` | string | 否 | 英文描述（缺省回退 `description`） |
-| `version` | string | 否 | 配方/镜像版本（如 `0.3.1`；通常对齐专属镜像 tag） |
+| `version` | string | 否 | 配方/镜像版本（如 `0.3.1`；通常与配方引用的镜像 tag 对齐） |
 | `image` | string | 否 | 默认镜像（可为空，由变量覆盖） |
 | `nodes` | int | 否 | **固定拓扑**：确切的节点数量（None=不固定）。每个配方按固定设备数调优，发布时须恰好匹配（不用 min/max 比较）。GB10 每机 1 GPU，TP=节点数，不另设 `tensor_parallel`/`topology`；也不设 `dtype`（可能混合架构） |
 | `compose_template` | string | ✅ | compose 模板（每节点一份，支持 `${VAR}` 占位符，`.env` 插值） |
@@ -72,8 +72,8 @@
 
 ```json
 {
-  "name": "Example-Model（专属镜像）",
-  "name_en": "Example-Model (dedicated image)",
+  "name": "Example-Model（DSpark）",
+  "name_en": "Example-Model (DSpark)",
   "description": "示例配方。",
   "description_en": "Example recipe.",
   "version": "1.0.0",

@@ -1,27 +1,19 @@
-# 构建产物与本地运行时
-logs/
-dist/
-*.tar
-*.tgz
-*.whl
-
-# 构建期由 scripts/build.sh 生成的临时构建上下文
-.dockerbuild/
-
 # Python
 __pycache__/
 *.pyc
 .venv/
 venv/
 
+# 本地运行/构建残留（仅本机，不入库）
+logs/
+dist/
+.build-ref/
+seed-cache/
+*.tar
+*.tgz
+*.whl
+
 # 编辑器 / 系统
 .DS_Store
 .idea/
 .vscode/
-
-# overlay 移植参考源码（v0.26.0 / flashinfer / b12x / Anemll）
-.build-ref/
-
-# JIT 缓存 bake 种子（139MB，由服务节点预热生成，不入库；构建时用
-# SEED_CACHE_DIR=seed-cache bash scripts/build.sh model 指定）
-seed-cache/

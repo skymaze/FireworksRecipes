@@ -1,164 +1,104 @@
-# 🎇 FireworksRecipes (English)
+# 🎇 FireworksRecipes
 
-Build repository that produces **per-model serving images** and **native recipes**
-for **Fireworks** (a DGX Spark cluster management tool).
+DGX Spark (GB10) **model recipes** for **Fireworks** (DGX Spark cluster manager): each
+recipe is a `fireworks.recipe.json` you can import directly (image / fixed topology / tuned
+parameters / auto-filled network vars), plus the `recipes/index.json` catalog the "Recipe
+Store" reads.
 
-> Unlike the common "one vLLM image + runtime patching" approach, this repo builds a
-> **dedicated image per model**, baking the model's required vLLM patches and tuned
-> environment variables at **build time**; no runtime patching needed. Fireworks pulls
-> the image and publishes tasks directly.
-> No third-party prebuilt images are used — every component is compiled from source
-> locally, maintained in this repository.
+> This repository ships **recipes and catalog only — no image build code.** Recipes reference
+> ready-made image tags; Fireworks pulls and distributes them to nodes.
 
-中文版 (Chinese original): [../README.md](../README.md)
+**中文**: [../README.md](../README.md)
 
-## Supported models
+Current recipes:
 
-| Model | Image tag | Notes |
+| Recipe | Image | Description |
 |---|---|---|
-| DeepSeek-V4-Flash-0731 | `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` | 2-node TP=2 · mainline vLLM v0.26.0 + GB10-targeted overlay · InstantTensor + dspark speculative MTP=5 · KV=nvfp4_ds_mla · 1M context · MoE=auto/DeepGEMM · fw-warmup patch + baked JIT cache (zero inference-time compilation) |
-| DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 2-node TP=2 DSpark serving, migrated from Fireworks' former built-in recipe · FlashInfer b12x + dspark speculation · NVFP4 DS-MLA · 1M context |
+| DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 2-node TP=2 DSpark · FlashInfer b12x + dspark spec · NVFP4 DS-MLA · 1M context |
+| DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **4-node TP=4** DSpark · FlashInfer b12x + dspark k=5 · NVFP4 DS-MLA · **1M context** · verified on a real agentic workload |
 
-> **Fixed topology**: every recipe declares an **exact node count**, e.g. 2 nodes · TP=2.
-> You must match it exactly when publishing — model parameters are tuned for that
-> topology, no vague "2 or more". Pick the matching recipe for other topologies.
+> **Fixed topology**: every recipe declares an exact node count (e.g., 2 nodes · TP=2 or
+> 4 nodes · TP=4); Fireworks publish must match it exactly, as parameters are tuned for the
+> topology. Pick the matching recipe for your topology.
 
 ## Branching model
 
 | Branch | Content |
 |---|---|
-| `main` | **Tested** recipes: battle-tested and ready for the Fireworks store |
-| `dev` | **In-test** recipes: new recipes / parameter tweaks land here first; merge to `main` once validated on real hardware |
+| `main` | **Hardware-tested** recipes: store-stable, ready to publish |
+| `dev` | **In-test** recipes: new/changed recipes land here first, merged to `main` after validation |
 
-Workflow:
+Flow: any new/changed recipe goes to `dev` first (docs and `recipes/index.json` travel with the
+branch) → validated on real hardware → `git checkout main && git merge dev`. Unfinished / failed
+experiments stay on `dev`.
 
-- Any new or changed recipe goes to the `dev` branch first (docs and the `recipes/index.json`
-  manifest move with the branch).
-- After real-hardware validation, `git checkout main && git merge dev` publishes it as a
-  stable recipe.
-- Failed / abandoned experiments stay on `dev` — never merged into `main`.
+Fireworks lets you pick a branch per recipe source (default `main`), so a running cluster can
+preview `dev` recipes and switch back to `main` once stable.
 
-Fireworks can load a recipe source from **any branch** (default `main`; pick `dev` etc. when
-adding the source), so a running cluster can preview "recipes in test" from `dev` and switch
-back to `main` once stable.
+## Catalog (read by Fireworks)
 
-## Repository layout
+- `recipes/index.json` — the catalog manifest (`id / provider / model / path / readme /
+  readme_en / version / params / context_length / modality / nodes / image / tags`). Fireworks
+  reads only this file, no tree scan.
+- `recipes/<id>/fireworks.recipe.json` — runnable recipe, aligned with Fireworks
+  `POST /api/recipes/import` schema; `image` is a ready-made registry tag.
+- `recipes/<id>/README.md` (+ optional `README.en.md`) — rendered in the Recipe Store detail.
+- Bilingual fields: `xxx_en` siblings (`name_en / description_en / label_en / help_en`) are
+  selected by UI language, falling back to the primary (zh) language.
+- Field spec: [docs/RECIPE-FORMAT.md](./RECIPE-FORMAT.md)
+- Variable model follows Fireworks: `MASTER_ADDR`=`cluster/head_roce_ip`, `MASTER_PORT` user
+  var (default 25000), `NODE_RANK / HEADLESS / VLLM_HOST_IP / NCCL_*` auto-filled node vars.
+
+## Layout
 
 ```
 FireworksRecipes/
-├── versions.conf        # Global version lock (all source/dependency pins)
-├── LICENSE / NOTICE.md  # Apache-2.0 license and third-party attribution
-├── scripts/
-│   ├── build.sh         # Local source build driver (base / model / all)
-│   ├── bench/           # Benchmark harness: bench_decode.py / bench_prefill.py
-│   └── deploy/          # 2-node deployment: deploy_v0260.sh / run_vllm_node.sh
-├── docker/
-│   └── vllm-b12x.Dockerfile   # Multi-stage source build: flashinfer/vllm/deepgemm/nccl → runner
-├── overlay/
-│   └── vllm/            # vLLM source overlay (Anemll recipe port; rsync'd into wheel at build)
-├── docs/
-│   ├── README.en.md           # This document
-│   └── BENCHMARK-v0260.md     # 2-node benchmark results and comparison
-└── recipes/
-    ├── index.json              # Catalog manifest, store data source
-    ├── deepseek-v4-flash-0731/
-    │   ├── build.conf
-    │   ├── Dockerfile.model
-    │   ├── fireworks.recipe.json
-    │   ├── README.md / README.en.md
-    │   └── patches/           # hybrid-draft-loader / fw-warmup
-    ├── deepseek-v4-flash-dspark/
-    │   ├── fireworks.recipe.json
-    │   └── README.md / README.en.md
-    └── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned · verified on hardware)
-        ├── fireworks.recipe.json
-        └── README.md / README.en.md
+├── LICENSE / NOTICE.md   # Apache-2.0 license & attributions
+├── recipes/
+│   ├── index.json                  # catalog manifest (store data source)
+│   ├── deepseek-v4-flash-dspark/   # fireworks.recipe.json + README(.en)
+│   └── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
+├── scripts/validate.py   # recipe/manifest validation
+├── schemas/manifest.schema.json
+└── docs/  README.en.md · RECIPE-FORMAT.md
 ```
 
-## Architecture
+## Run in Fireworks
 
-### 1. Source build system (`docker/vllm-b12x.Dockerfile`)
-
-Multi-stage, fully local build, **no third-party images/prebuilt artifacts**:
-
-| Stage | Contents |
-|---|---|
-| `base` | CUDA 13 devel + build deps + PyTorch(cu130) + **NCCL from source** (sm_121 gencode) |
-| `flashinfer` | FlashInfer from source, commit 0472b9b ≈ 0.6.15; cubins skipped, runtime JIT |
-| `vllm` | Mainline vLLM v0.26.0 incl. DeepGEMM, Rust-frontend wheel build; overlay baked in via rsync |
-| `runner` | Runtime image: wheels + ray/fastsafetensors/instanttensor + b12x(SparkInfer) + NCCL ordering |
-
-All versions are pinned in `versions.conf`.
-
-### 2. Per-model layer (`recipes/<id>/Dockerfile.model`)
-
-- **Patches**: `hybrid-draft-loader` (draft model → lazy safetensors under instanttensor);
-  `fw-warmup` (fix NVIDIA mHC warmup no-op + sparse MLA coverage → no inference-time JIT/OOM).
-- **Tuned ENV**: GB10-specific defaults, overridable via recipe `environment`.
-- Metadata `FW_MODEL_ID` + OCI LABELS.
-
-> **Weights are not baked into the image** (~167 GB for DeepSeek-V4-Flash-0731). Distribute
-> via Fireworks model management; image loads offline (`HF_HUB_OFFLINE=1`).
-
-### 3. Recipe (`recipes/<id>/fireworks.recipe.json`)
-
-Follows the Fireworks `POST /api/recipes/import` schema (`image` field validated against
-`build.sh` output; `compose_template` uses v0.26.0 `vllm serve` args with multi-node
-distributed settings).
-
-## Quick start
-
-Prerequisites: linux/arm64 (aarch64) build host (DGX Spark itself), Docker ≥ 23
-(BuildKit), network access to GitHub/HuggingFace, ≥ 100 GB disk.
+1. Recipes page: add this repo as a recipe source → install `recipes/<id>/fireworks.recipe.json`.
+2. Images page: ensure the referenced image is pullable (Fireworks distributes to nodes).
+3. Publish a task: pick the recipe + matching cluster (head = rank0, exact node count).
+4. Verify:
 
 ```bash
-# 1) build base runner
-./scripts/build.sh base
-
-# 2) build model image
-./scripts/build.sh model --model deepseek-v4-flash-0731 --push-registry ghcr.io/<org>
-#    or: --save dist/   (docker load route)
-#    optional: SEED_CACHE_DIR=seed-cache bash scripts/build.sh model  # bake JIT cache
-
-# 3) run in Fireworks: import image + recipe, publish 2-node TP=2 task (head=rank0)
-
-# 4) verify
 curl -s http://<head-ip>:8000/v1/models
-curl -s http://<head-ip>:8000/v1/chat/completions -H 'Content-Type: application/json' \
-  -d '{"model":"deepseek-v4-flash-0731","messages":[{"role":"user","content":"你好"}],"thinking":true}'
-
-# 5) bench & deploy (placeholders are overridable via env)
-python3 scripts/bench/bench_decode.py  --base-url http://<head-ip>:8000/v1 --model deepseek-v4-flash-0731 --concurrency 1,2,4 --max-tokens 128
-HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
+curl -s http://<head-ip>:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"你好"}],"thinking":true}'
 ```
 
-> Deployment scripts read node addresses from `HEAD_IP`/`WORKER_IP`/`MASTER_ADDR` env vars
-> (no hardcoded lab IPs). A 32 GiB host swap is recommended as a safety cushion for
-> compile-time memory peaks.
+## Add / change a recipe
 
-## Benchmark highlights (v0.26.0 · 2× DGX Spark TP=2)
+1. `cp -r recipes/deepseek-v4-flash-dspark recipes/<new-id>` (drop non-recipe files).
+2. Edit `fireworks.recipe.json` (`name / description / image / variable defaults / nodes / version`).
+3. Write `README.md` (+ optional `README.en.md`).
+4. Register the entry in `recipes/index.json` (must match the recipe's
+   `image/version/nodes/tensor_parallel`).
+5. `python3 scripts/validate.py`.
+6. Commit to `dev`, merge to `main` after real-hardware validation.
 
-See **[BENCHMARK-v0260.md](./BENCHMARK-v0260.md)** for full methodology and history.
+## Validation
 
-- decode (512-token fixed): **41.2 / 94.4 / 151.2 tok/s** @1/2/4; per-session 54.8 / 34.1
-- prefill: 1300–2400 tok/s @2–16K; **128K=1566 / 256K=1289 / 512K=1400 / 1M=900+ tok/s**
-- stability: long contexts (200K–1M) run without crash; inference-time JIT compilation
-  eliminated via **fw-warmup patch + baked JIT cache** (mHC warmup <1s on fresh nodes).
+`python3 scripts/validate.py` checks recipe schema, catalog-manifest consistency, and that
+`source=cluster/node` variables use known `auto` keys. CI runs it on main/dev pushes and PRs
+(zero dependencies).
 
-Final config: `--kv-cache-dtype nvfp4_ds_mla --max-model-len 1048576 --max-num-seqs 6
---max-cudagraph-capture-size 36 --gpu-memory-utilization 0.88` +
-`VLLM_USE_BREAKABLE_CUDAGRAPH=0` + MoE=auto (DeepGemmFP4Experts).
+## References & acknowledgments
 
-## References & attribution
+**Apache-2.0** ([`LICENSE`](../LICENSE)); sources and derivations in
+[`NOTICE.md`](../NOTICE.md).
 
-Apache-2.0. See [LICENSE](../LICENSE) and [NOTICE.md](../NOTICE.md) for third-party
-attribution. Reference sources:
-
-- [vllm-project/vllm](https://github.com/vllm-project/vllm): v0.26.0, source build base
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10): GB10 performance recipe and attention overlay port
-- [lukealonso/b12x](https://github.com/lukealonso/b12x): MXFP4 MoE kernels, installed as a separate package
-- [jvr0x/dgx-spark-bench](https://github.com/jvr0x/dgx-spark-bench): 1M/NVFP4 dual-node recipe reference
-- [tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark): 1M/NVFP4 dual-node recipe reference
-- [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark): dual-node DSpark recipe route reference
-
-See also [CONTRIBUTING.md](../CONTRIBUTING.md) and [SECURITY.md](../SECURITY.md).
+Parameter-level references (recipe tuning sources):
+- [jvr0x/dgx-spark-bench](https://github.com/jvr0x/dgx-spark-bench)
+- [tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark)
+- [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)

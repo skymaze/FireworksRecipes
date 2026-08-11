@@ -7,9 +7,8 @@ DeepSeek-V4-Flash：
 - 拓扑：**固定 2 节点 · TP=2**，FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文
 - 模型：`deepseek-ai/DeepSeek-V4-Flash-0731`（约 167GB，Fireworks 分发后离线加载）
 
-> 与「专属镜像」配方 `deepseek-v4-flash-0731` 的区别：本配方直接使用 Anemll 分发镜像，
-> 可快速体验 dspark 投机路径；专属镜像为自编译 vLLM v0.26.0 + GB10 定向 overlay，
-> prefill 更优（MoE=auto，2200+ tok/s）。按需选其一。
+> 本配方直接使用 Anemll 预构建分发镜像，开箱即体验 FlashInfer b12x + dspark 投机路径，
+> 1M 上下文（NVFP4 DS-MLA）。仓库内另有一条 4 节点 TP=4 的 DSpark 配方，按拓扑需要选用。
 
 ## 快速开始
 
