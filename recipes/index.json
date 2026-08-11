@@ -54,6 +54,33 @@
       "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash: Anemll distribution image, FlashInfer b12x + dspark speculation, NVFP4 DS-MLA, 1M context.",
       "name": "DeepSeek-V4-Flash MiaAI-Lab",
       "name_en": "DeepSeek-V4-Flash MiaAI-Lab"
+    },
+    {
+      "id": "deepseek-v4-flash-0731-tp4-4x",
+      "provider": "deepseek-ai",
+      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "path": "recipes/deepseek-v4-flash-0731-tp4-4x/fireworks.recipe.json",
+      "readme": "recipes/deepseek-v4-flash-0731-tp4-4x/README.md",
+      "readme_en": "recipes/deepseek-v4-flash-0731-tp4-4x/README.en.md",
+      "version": "1.0.0",
+      "params": "284B/13B",
+      "context_length": 1048576,
+      "modality": "text",
+      "nodes": 4,
+      "image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
+      "tags": [
+        "gb10",
+        "dspark",
+        "anemll",
+        "vllm",
+        "tp4",
+        "1m-context",
+        "agentic"
+      ],
+      "description": "DeepSeek-V4-Flash-0731 四节点 TP=4 DSpark 服务：Anemll 分发镜像、FlashInfer b12x + dspark 投机 k=5、NVFP4 DS-MLA、1M 上下文（agentic 工作负载实机验证）。",
+      "description_en": "4-node TP=4 DSpark serving for DeepSeek-V4-Flash-0731: Anemll distribution image, FlashInfer b12x + dspark speculation k=5, NVFP4 DS-MLA, 1M context (verified on a real agentic workload).",
+      "name": "DeepSeek-V4-Flash DSpark TP=4",
+      "name_en": "DeepSeek-V4-Flash DSpark TP=4"
     }
   ]
 }

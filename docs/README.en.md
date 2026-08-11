@@ -23,6 +23,25 @@ for **Fireworks** (a DGX Spark cluster management tool).
 > You must match it exactly when publishing — model parameters are tuned for that
 > topology, no vague "2 or more". Pick the matching recipe for other topologies.
 
+## Branching model
+
+| Branch | Content |
+|---|---|
+| `main` | **Tested** recipes: battle-tested and ready for the Fireworks store |
+| `dev` | **In-test** recipes: new recipes / parameter tweaks land here first; merge to `main` once validated on real hardware |
+
+Workflow:
+
+- Any new or changed recipe goes to the `dev` branch first (docs and the `recipes/index.json`
+  manifest move with the branch).
+- After real-hardware validation, `git checkout main && git merge dev` publishes it as a
+  stable recipe.
+- Failed / abandoned experiments stay on `dev` — never merged into `main`.
+
+Fireworks can load a recipe source from **any branch** (default `main`; pick `dev` etc. when
+adding the source), so a running cluster can preview "recipes in test" from `dev` and switch
+back to `main` once stable.
+
 ## Repository layout
 
 ```
@@ -48,7 +67,10 @@ FireworksRecipes/
     │   ├── fireworks.recipe.json
     │   ├── README.md / README.en.md
     │   └── patches/           # hybrid-draft-loader / fw-warmup
-    └── deepseek-v4-flash-dspark/
+    ├── deepseek-v4-flash-dspark/
+    │   ├── fireworks.recipe.json
+    │   └── README.md / README.en.md
+    └── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned · verified on hardware)
         ├── fireworks.recipe.json
         └── README.md / README.en.md
 ```

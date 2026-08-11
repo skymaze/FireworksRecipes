@@ -15,9 +15,29 @@
 |---|---|---|
 | DeepSeek-V4-Flash-0731 | `ghcr.io/skymaze/fireworks-models/deepseek-v4-flash-0731:0.3.1` | 双节点 TP=2 · vLLM v0.26.0 主路径 + GB10 定向 overlay · InstantTensor + dspark 投机 MTP=5 · KV=nvfp4_ds_mla · 1M 上下文 · MoE=auto/DeepGEMM · fw-warmup 补丁 + JIT 缓存 bake，上线零推理期编译 |
 | DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 双节点 TP=2 DSpark 服务，由 Fireworks 原内置配方迁移而来 · FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文 |
+| DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
 
-> **拓扑固定**：所有配方均声明**确切的节点数**，如 2 节点 · TP=2；发布时必须恰好匹配，
+> **拓扑固定**：所有配方均声明**确切的节点数**，如 2 节点 · TP=2 或 4 节点 · TP=4；
+> 发布时必须恰好匹配，
 > 模型参数按该拓扑调优，不再提供「≥2」的模糊空间。不同拓扑请选用对应配方。
+
+---
+
+## 分支模型
+
+| 分支 | 内容 |
+|---|---|
+| `main` | **经过实机测试**的配方：可发布、供 Fireworks 商店稳定使用 |
+| `dev` | **测试中的配方**：新配方 / 参数调整先进这里，实机验证通过后再 merge 到 `main` |
+
+工作流：
+
+- 任何新配方 / 现有配方改动，先进 `dev` 分支（文档与 `recipes/index.json` manifest 随分支一起走）。
+- 在 `dev` 上通过实机测试后，`git checkout main && git merge dev` 发布为稳定配方。
+- 测试未通过 / 中途放弃的改动，留在或丢弃在 `dev`，**不进 `main`**。
+
+Fireworks 加载配方源时可**自由选择分支**（默认 `main`；添加配方源时可选 `dev` 等），
+因此运行中的集群可用 `dev` 分支预览「测试中的配方」，稳定后切回 `main`。
 
 ---
 
@@ -72,7 +92,10 @@ FireworksRecipes/
     │   └── patches/
     │       ├── hybrid-draft-loader/   # 自研补丁：instanttensor 下草稿 lazy safetensors
     │       └── fw-warmup/             # 自研补丁：NVIDIA mHC warmup no-op 修复 + sparse MLA 覆盖
-    └── deepseek-v4-flash-dspark/
+    ├── deepseek-v4-flash-dspark/
+    │   ├── fireworks.recipe.json
+    │   └── README.md / README.en.md
+    └── deepseek-v4-flash-0731-tp4-4x/   # 4 节点 TP=4（agentic 实机验证调优）
         ├── fireworks.recipe.json
         └── README.md / README.en.md
 ```
@@ -271,3 +294,4 @@ HEAD_IP=<head-ip> WORKER_IP=<worker-ip> ./scripts/deploy/deploy_v0260.sh [IMAGE]
 - [jvr0x/dgx-spark-bench](https://github.com/jvr0x/dgx-spark-bench)：1M/NVFP4 双节点配方参考
 - [tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4-KV-2x-DGX-Spark)：1M/NVFP4 双节点配方参考
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)：DSpark 双节点配方路线参考
+

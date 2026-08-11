@@ -5,8 +5,9 @@ images for DGX Spark (GB10) — most changes fall into a few well-defined bucket
 
 ## Development flow
 
-1. **Fork & branch** off `master`. Use descriptive branch names
-   (`feat/`, `fix/`, `docs/`).
+1. **Fork & branch** off `main`. **Branching model**: `main` = tested recipes (store-stable);
+   new/changed recipes land on the `dev` branch first and are merged to `main` only after
+   real-hardware validation. Use descriptive branch/commit names (`feat/`, `fix/`, `docs/`).
 2. **Keep the repo buildable from a clean checkout.** Build artifacts that are
    git-ignored (`.build-ref/`, `dist/`, `logs/`, `seed-cache/`, `__pycache__/`)
    must never be committed. The default docker build must succeed without them
