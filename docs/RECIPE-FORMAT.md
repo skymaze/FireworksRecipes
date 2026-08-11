@@ -135,7 +135,7 @@
 
 ## 4. 提 PR 建议
 
-1. `recipes/<id>/recipe/fireworks.recipe.json` + `README.md`（+ 可选 `README.en.md`）
+1. `recipes/<id>/fireworks.recipe.json` + `README.md`（+ 可选 `README.en.md`）
 2. 在 `recipes/index.json` 登记一条（含 `nodes`、`description(_en)`、`readme(_en)`；`image/version/nodes` 须与配方一致）
 3. 保持 `MASTER_ADDR=head_roce_ip` / `MASTER_PORT` 为用户变量等当前变量模型约定
-4. 大体积构建产物一律进 `.gitignore`，仓库保持轻量
+4. 大体积本地产物 / 缓存一律进 `.gitignore`，仓库保持轻量

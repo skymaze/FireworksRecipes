@@ -3,13 +3,13 @@
 用 Fireworks 在 **4 台** DGX Spark（head + 3 worker，RoCE 组网）上跑起
 **DeepSeek-V4-Flash-0731** 的 **TP=4** 服务：
 
-- 镜像：`ghcr.io/anemll/dspark-vllm-gx10:0.1.1`（Anemll 预构建 vLLM 分发镜像，vLLM 0.25.x）
+- 镜像：`ghcr.io/anemll/dspark-vllm-gx10:0.1.1`（Anemll 预构建 vLLM 分发镜像）
 - 拓扑：**固定 4 节点 · TP=4**；FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文**
 - 模型：`deepseek-ai/DeepSeek-V4-Flash-0731`（约 167GB，Fireworks 分发后离线加载）
 - 默认参数按 **agentic 工作负载实机验证** 结果固化（k=5、`GPU_MEMORY_UTILIZATION=0.80`、
   `DEFAULT_THINKING=max`、1M 上下文）。
 
-## 与两条 2 节点配方的区别
+## 与 2 节点配方的区别
 
 | 维度 | `deepseek-v4-flash-dspark` | **本配方（TP=4）** |
 |---|---|---|
@@ -56,8 +56,8 @@
   `[ -n "$${VAR:-}" ] || VAR='{"..."}'` 的无嵌套写法兜底，**勿改回** `${VAR:-{...}}`。
 - **`max_num_batched_tokens` 不是 prefill 预算**：投机解码下 vLLM 从该值减去
   `(k−1)×max_num_seqs` 得到 `max_num_scheduled_tokens`，低于 8192 会告警；本配方默认 8192 对齐阈值，并发高时可适当上调。
-- **`GPU_MEMORY_UTILIZATION`** 夹在损失与 OOM 之间：0.90 无法开机（TP=4 每机仅 ~39GB 权重，
-  0.80 已实测稳定）；提高它会回收 KV 池但别顶到 0.90。
+- **`GPU_MEMORY_UTILIZATION`** 夹在损失与 OOM 之间：过高（0.90）无法开机；0.80 已实机验证稳定，
+  提高它会回收 KV 池但别顶到 0.90。
 - **`--override-generation-config` 已移除**：实机验证后不再把服务端温度覆盖参数下发
   （容器 environment 中 `OVERRIDE_GENERATION_CONFIG` 保留但命令不再引用）；需要压默认温度时
   在做请求侧设置或恢复该参数。若换镜像 / 改引擎，`MTP_NUM_TOKENS` 等投机参数需重新实测。

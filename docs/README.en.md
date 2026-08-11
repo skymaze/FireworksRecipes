@@ -38,8 +38,8 @@ preview `dev` recipes and switch back to `main` once stable.
 ## Catalog (read by Fireworks)
 
 - `recipes/index.json` — the catalog manifest (`id / provider / model / path / readme /
-  readme_en / version / params / context_length / modality / nodes / image / tags`). Fireworks
-  reads only this file, no tree scan.
+  readme_en / version / params / context_length / modality / nodes / image / tags`, plus
+  `name/description` incl. `*_en`). Fireworks reads only this file, no tree scan.
 - `recipes/<id>/fireworks.recipe.json` — runnable recipe, aligned with Fireworks
   `POST /api/recipes/import` schema; `image` is a ready-made registry tag.
 - `recipes/<id>/README.md` (+ optional `README.en.md`) — rendered in the Recipe Store detail.
@@ -53,13 +53,15 @@ preview `dev` recipes and switch back to `main` once stable.
 
 ```
 FireworksRecipes/
-├── LICENSE / NOTICE.md   # Apache-2.0 license & attributions
+├── LICENSE / NOTICE.md / SECURITY.md   # license, attributions, security
+├── .github/workflows/ci.yml            # lightweight validation CI (validate.py)
+├── .gitignore
 ├── recipes/
 │   ├── index.json                  # catalog manifest (store data source)
 │   ├── deepseek-v4-flash-dspark/   # fireworks.recipe.json + README(.en)
 │   └── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
 ├── scripts/validate.py   # recipe/manifest validation
-├── schemas/manifest.schema.json
+├── schemas/  manifest.schema.json · recipe.schema.json
 └── docs/  README.en.md · RECIPE-FORMAT.md
 ```
 
@@ -71,8 +73,8 @@ FireworksRecipes/
 4. Verify:
 
 ```bash
-curl -s http://<head-ip>:8000/v1/models
-curl -s http://<head-ip>:8000/v1/chat/completions \
+curl -s http://<head-ip>:8888/v1/models
+curl -s http://<head-ip>:8888/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"你好"}],"thinking":true}'
 ```
@@ -83,7 +85,7 @@ curl -s http://<head-ip>:8000/v1/chat/completions \
 2. Edit `fireworks.recipe.json` (`name / description / image / variable defaults / nodes / version`).
 3. Write `README.md` (+ optional `README.en.md`).
 4. Register the entry in `recipes/index.json` (must match the recipe's
-   `image/version/nodes/tensor_parallel`).
+   `image/version/nodes`).
 5. `python3 scripts/validate.py`.
 6. Commit to `dev`, merge to `main` after real-hardware validation.
 

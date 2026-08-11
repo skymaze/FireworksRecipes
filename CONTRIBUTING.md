@@ -13,7 +13,7 @@ recipes for DGX Spark (GB10) — most changes are to a single recipe directory.
 3. **A recipe change touches these files together:**
    - `recipes/<id>/fireworks.recipe.json` — parameters / image / topology.
    - `recipes/<id>/README.md` (+ optional `README.en.md`) — user documentation.
-   - `recipes/index.json` — catalog entry (`image/version/nodes/tensor_parallel` must match
+   - `recipes/index.json` — catalog entry (`image/version/nodes` must match
      the recipe, or `validate.py` fails).
    - Variables with `source=cluster/node` must use a known `auto` key (see
      `docs/RECIPE-FORMAT.md` "Auto-fill keys"); new keys must be mirrored in the Fireworks

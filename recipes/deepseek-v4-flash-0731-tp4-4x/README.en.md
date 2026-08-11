@@ -3,8 +3,7 @@
 Serves **DeepSeek-V4-Flash-0731** at **TP=4** on **4** DGX Spark nodes (head + 3
 workers over RoCE) from Fireworks:
 
-- Image: `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` (Anemll prebuilt vLLM distribution,
-  vLLM 0.25.x)
+- Image: `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` (Anemll prebuilt vLLM distribution image)
 - Topology: **fixed 4 nodes · TP=4**; FlashInfer b12x + dspark speculation k=5 · NVFP4
   DS-MLA · **1M context**
 - Model: `deepseek-ai/DeepSeek-V4-Flash-0731` (~167 GB, distributed by Fireworks, loaded
@@ -61,8 +60,8 @@ are auto-filled by Fireworks. `max_cudagraph_capture_size` is computed as
 - **`max_num_batched_tokens` is not a prefill budget**: with spec decode vLLM subtracts
   `(k−1)×max_num_seqs` to get `max_num_scheduled_tokens` and warns below 8192; this recipe
   defaults to exactly 8192 (on the threshold). Raise it if concurrency is high.
-- **`GPU_MEMORY_UTILIZATION`** is pinned between a loss and an OOM: 0.90 won't boot (TP=4 holds
-  ~39 GB weights/box; 0.80 is the validated default). Raising it reclaims KV pool — just don't
+- **`GPU_MEMORY_UTILIZATION`** is pinned between a loss and an OOM: too high (0.90) won't boot;
+  0.80 is the validated default on hardware. Raising it reclaims KV pool — just don't
   push to 0.90.
 - **`--override-generation-config` has been removed**: after real-hardware validation the
   server-side temperature override is no longer passed to vLLM (the `OVERRIDE_GENERATION_CONFIG`

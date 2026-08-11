@@ -73,9 +73,9 @@
       "type": "float",
       "source": "user",
       "default": "0.80",
-      "help": "实机验证默认 0.80；过高 0.90 无法开机（TP=4 每机约 39GB 权重）",
+      "help": "实机验证默认 0.80；过高 0.90 无法开机",
       "label_en": "GPU memory utilization",
-      "help_en": "Verified default 0.80; 0.90 fails to boot (TP=4 holds ~39 GB weights/box)"
+      "help_en": "Verified default 0.80; 0.90 fails to boot"
     },
     {
       "key": "MTP_NUM_TOKENS",

@@ -45,8 +45,8 @@ Fireworks 加载配方源时可**自由选择分支**（默认 `main`；添加�
 「配方商店」一键安装并发布。
 
 - `recipes/index.json` —— **目录清单**：每条列出 `id / provider / model / path / readme /
-  readme_en / version / params / context_length / modality / nodes / image / tags`；
-  Fireworks 只读它，不做整树扫描。
+  readme_en / version / params / context_length / modality / nodes / image / tags`，以及
+  `name/description`（含 `*_en`）；Fireworks 只读它，不做整树扫描。
 - `recipes/<id>/fireworks.recipe.json` —— 可运行配方，字段对齐 Fireworks
   `POST /api/recipes/import` schema；`image` 为镜像仓库里的现成镜像 tag。
 - `recipes/<id>/README.md` —— 介绍文档，Fireworks「配方商店」详情里渲染；可另配 `README.en.md`。
@@ -64,7 +64,9 @@ Fireworks 加载配方源时可**自由选择分支**（默认 `main`；添加�
 
 ```
 FireworksRecipes/
-├── LICENSE / NOTICE.md   # Apache-2.0 许可与来源声明
+├── LICENSE / NOTICE.md / SECURITY.md   # 许可与来源/安全声明
+├── .github/workflows/ci.yml            # 轻量校验 CI（validate.py）
+├── .gitignore
 ├── recipes/
 │   ├── index.json                  # ★ 目录清单，商店数据源
 │   ├── deepseek-v4-flash-dspark/
@@ -76,7 +78,8 @@ FireworksRecipes/
 ├── scripts/
 │   └── validate.py        # 配方/manifest 校验（schema + 一致性 + auto 键）
 ├── schemas/
-│   └── manifest.schema.json
+│   ├── manifest.schema.json
+│   └── recipe.schema.json
 └── docs/
     ├── README.en.md       # 英文文档
     └── RECIPE-FORMAT.md   # 配方字段规范
@@ -92,8 +95,8 @@ FireworksRecipes/
 4. **推理验证**：
 
 ```bash
-curl -s http://<head-ip>:8000/v1/models
-curl -s http://<head-ip>:8000/v1/chat/completions \
+curl -s http://<head-ip>:8888/v1/models
+curl -s http://<head-ip>:8888/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"你好"}],"thinking":true}'
 ```
@@ -105,8 +108,8 @@ curl -s http://<head-ip>:8000/v1/chat/completions \
 1. 复制目录：`cp -r recipes/deepseek-v4-flash-dspark recipes/<new-id>`（去掉非配方文件）。
 2. 改 `fireworks.recipe.json`：`name / description / image / 变量默认值 / nodes / version`。
 3. 写 `README.md`（可加 `README.en.md`）。
-4. 在 `recipes/index.json` 登记一条（`image/version/nodes/tensor_parallel` 必须与配方一致，
-   否则 `validate.py` 报错）。
+4. 在 `recipes/index.json` 登记一条（`image/version/nodes` 必须与配方一致，否则
+   `validate.py` 报错）。
 5. 本地校验：`python3 scripts/validate.py`。
 6. 提交到 `dev`，实机验证通过后 merge 到 `main`。
 

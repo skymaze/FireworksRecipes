@@ -26,7 +26,7 @@ upstream projects where relevant.
   environment variables; never bake passwords/tokens into recipes.
 - **Trusted model weights only.** Weights are loaded from HF caches on the nodes; pin
   revisions and only use checkpoints you trust.
-- **Network exposure:** vLLM serves on the host network (`0.0.0.0:8000`). Restrict
+- **Network exposure:** vLLM serves on the host network (`0.0.0.0:8888`). Restrict
   access via your cluster network / firewall — do not expose the port to untrusted
   networks.
 - **Image provenance:** verify image digests when loading from a registry, and follow
