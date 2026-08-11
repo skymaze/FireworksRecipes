@@ -16,14 +16,14 @@ recipes for DGX Spark (GB10) — most changes are to a single recipe directory.
    - `recipes/index.json` — catalog entry (`image/version/nodes/tensor_parallel` must match
      the recipe, or `validate.py` fails).
    - Variables with `source=cluster/node` must use a known `auto` key (see
-     `docs/RECIPE-FORMAT.md`《自动填充键》); new keys must be mirrored in the Fireworks
+     `docs/RECIPE-FORMAT.md` "Auto-fill keys"); new keys must be mirrored in the Fireworks
      backend's `recipe_render.AUTO_KEYS`.
 
 ## Before submitting
 
 ```bash
-python3 scripts/validate.py                 # 配方/manifest 全部校验（schema + 一致性 + auto 键）
-python3 -m json.tool recipes/<id>/fireworks.recipe.json >/dev/null   # 改动 JSON 可解析
+python3 scripts/validate.py                 # recipes/manifest validation (schema + consistency + auto keys)
+python3 -m json.tool recipes/<id>/fireworks.recipe.json >/dev/null   # changed recipe JSON parses
 ```
 
 - Run `git status --short --ignored` to confirm no stale local artifacts get staged.

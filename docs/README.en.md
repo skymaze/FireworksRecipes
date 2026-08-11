@@ -8,7 +8,7 @@ Store" reads.
 > This repository ships **recipes and catalog only — no image build code.** Recipes reference
 > ready-made image tags; Fireworks pulls and distributes them to nodes.
 
-**中文**: [../README.md](../README.md)
+**Chinese**: [../README.md](../README.md)
 
 Current recipes:
 

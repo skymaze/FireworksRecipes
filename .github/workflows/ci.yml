@@ -1,6 +1,7 @@
 name: ci
 
-# 轻量校验 CI：日常 push（main/dev）与 PR 只做配方/manifest 校验（零依赖，不构建镜像）。
+# Lightweight validation CI: pushes (main/dev) and PRs only run recipe/manifest
+# validation (zero deps, no image build).
 
 on:
   push:
@@ -18,5 +19,5 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
-      - name: 配方与 manifest 校验（schema + 一致性 + auto 键）
+      - name: Validate recipes & manifest (schema + consistency + auto keys)
         run: python3 scripts/validate.py
