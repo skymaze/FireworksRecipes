@@ -16,6 +16,7 @@ Current recipes:
 |---|---|---|
 | DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 2-node TP=2 DSpark · FlashInfer b12x + dspark spec · NVFP4 DS-MLA · 1M context |
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **4-node TP=4** DSpark · FlashInfer b12x + dspark k=5 · NVFP4 DS-MLA · **1M context** · verified on a real agentic workload |
+| DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context |
 
 > **Fixed topology**: every recipe declares an exact node count (e.g., 2 nodes · TP=2 or
 > 4 nodes · TP=4); Fireworks publish must match it exactly, as parameters are tuned for the
@@ -59,7 +60,8 @@ FireworksRecipes/
 ├── recipes/
 │   ├── index.json                  # catalog manifest (store data source)
 │   ├── deepseek-v4-flash-dspark/   # fireworks.recipe.json + README(.en)
-│   └── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
+│   ├── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
+│   └── deepseek-v4-flash-0731-spark-b12x/   # 2-node TP=2 · eugr/spark-vllm-b12x (from docker run, not yet verified)
 ├── scripts/validate.py   # recipe/manifest validation
 ├── schemas/  manifest.schema.json · recipe.schema.json
 └── docs/  README.en.md · RECIPE-FORMAT.md
