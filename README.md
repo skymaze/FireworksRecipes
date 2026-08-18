@@ -17,6 +17,7 @@
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **单节点** SGLang 服务 · flashinfer + DSPARK 投机（mamba 草稿）· **FP8 KV** · `--mamba-full-memory-ratio 11.01`（疑似笔误，待验证） |
+| GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
 
 > **拓扑固定**：每条配方声明**确切的节点数**（如 2 节点 · TP=2 或 4 节点 · TP=4）；
 > Fireworks 发布时必须恰好匹配，模型参数按该拓扑调优。不同拓扑请选用对应配方。
@@ -80,7 +81,10 @@ FireworksRecipes/
 │   ├── deepseek-v4-flash-0731-spark-b12x/   # 2 节点 TP=2 · eugr/spark-vllm-b12x（源自 docker run，未实机验证）
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
-│   └── qwen38-27b-sglang-dspark/   # 单节点 · SGLang + DSPARK（源自 docker run，未实机验证）
+│   ├── qwen38-27b-sglang-dspark/   # 单节点 · SGLang + DSPARK（源自 docker run，未实机验证）
+│   │   ├── fireworks.recipe.json
+│   │   └── README.md / README.en.md
+│   └── glm-5.2-quanttrio-tp4-dcp4-4x/   # 4 节点 TP=4 + DCP4 · spark-kit 生产栈（镜像构建推送至 ACR）
 │       ├── fireworks.recipe.json
 │       └── README.md / README.en.md
 ├── scripts/

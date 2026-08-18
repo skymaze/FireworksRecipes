@@ -111,6 +111,34 @@
       "description_en": "Single-node SGLang serving for Qwen3.8-27B-NVFP4: lmsysorg/sglang image, flashinfer attention, DSPARK speculation (mamba draft model), FP8 KV, --mamba-full-memory-ratio 11.01 (suspected typo, to verify).",
       "name": "Qwen3.8-27B SGLang DSPARK",
       "name_en": "Qwen3.8-27B SGLang DSPARK"
+    },
+    {
+      "id": "glm-5.2-quanttrio-tp4-dcp4-4x",
+      "provider": "zhipuai",
+      "model": "glm-5.2-quanttrio",
+      "path": "recipes/glm-5.2-quanttrio-tp4-dcp4-4x/fireworks.recipe.json",
+      "readme": "recipes/glm-5.2-quanttrio-tp4-dcp4-4x/README.md",
+      "readme_en": "recipes/glm-5.2-quanttrio-tp4-dcp4-4x/README.en.md",
+      "version": "1.0.0",
+      "params": "Int4-Int8Mix unpruned",
+      "context_length": 315968,
+      "modality": "text",
+      "nodes": 4,
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit",
+      "tags": [
+        "gb10",
+        "glm-5.2",
+        "quanttrio",
+        "dcp4",
+        "b12x",
+        "nvfp4-ds-mla",
+        "mtp",
+        "315k-context"
+      ],
+      "description": "GLM-5.2 QuantTrio（Int4-Int8Mix unpruned）四节点 TP=4 + DCP4 服务：AEON v0.27.1 平台镜像 + b12x + spark-kit 生产 overlay（B12X MLA SPARSE + a2a + MTP k=2 + nvfp4_ds_mla + 315,968 上下文）。",
+      "description_en": "4-node TP=4 + DCP4 serving for GLM-5.2 QuantTrio (Int4-Int8Mix unpruned): AEON v0.27.1 platform image + b12x + spark-kit production overlays (B12X MLA SPARSE + a2a + MTP k=2 + nvfp4_ds_mla + 315,968 context).",
+      "name": "GLM-5.2 QuantTrio DCP4",
+      "name_en": "GLM-5.2 QuantTrio DCP4"
     }
   ]
 }
