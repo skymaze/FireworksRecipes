@@ -84,7 +84,8 @@
   即崩溃；生产 315,968 已实测稳定。
 - **前缀缓存 ≈100x**：冷 prefill ~580-618 tok/s，但 turn2+ 在 16K/100K 上下文各为 ~1.3/1.7s；
   深会话请用 streaming 客户端并保持前缀缓存命中（GLM 模板会删前轮 reasoning，需要时传
-  `{"chat_template_kwargs":{"clear_thinking":false}}`）。
+  `{"chat_template_kwargs":{"clear_thinking":false}}`）。API 返回 `usage.prompt_tokens_details.cached_tokens`
+  即为当次请求缓存命中 token 数（已开 `--enable-prompt-tokens-details`），可用同前缀二次请求核对命中率。
 - **NCCL wedge**：源仓库结论维持全速配置 + 外部看门狗（CROSS_NIC=1 默认），偏移成本 > 病因；
   真遇到冻结可对比 `NCCL_CROSS_NIC=0`。
 - 单一 `mp` 后端、GB10 每机 1 GPU；只支持 4 节点（TP=4 + DCP=4）。

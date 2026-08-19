@@ -95,7 +95,9 @@ Deployed end to end on a real 4-node fleet (head + 3 workers) straight from this
 - **The prefix cache is worth ~100x**: cold prefill ~580-618 tok/s, but turn 2+ is ~1.3/1.7s
   at 16K/100K context; use streaming clients for deep sessions and protect prefix-cache hits
   (GLM's template drops prior-turn reasoning; send
-  `{"chat_template_kwargs":{"clear_thinking":false}}` when needed).
+  `{"chat_template_kwargs":{"clear_thinking":false}}` when needed). The API reports
+  per-request cache hits as `usage.prompt_tokens_details.cached_tokens`
+  (`--enable-prompt-tokens-details` is on); send the same prefix twice to verify the hit rate.
 - **NCCL wedge**: the source keeps the full-speed config with an external watchdog
   (CROSS_NIC=1 default; the mitigations cost more than the disease). Compare `NCCL_CROSS_NIC=0`
   only if you actually hit the freeze.
