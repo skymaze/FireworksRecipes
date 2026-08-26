@@ -1,19 +1,19 @@
 {
   "name": "DeepSeek-V4-Flash MiaAI-Lab",
   "description": "DeepSeek-V4-Flash 双节点 TP=2 DSpark 服务：Anemll 分发镜像、FlashInfer b12x + dspark 投机、NVFP4 DS-MLA、1M 上下文。",
-  "image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
-  "compose_template": "services:\n  vllm-dspark:\n    image: ${DSPARK_VLLM_IMAGE:-ghcr.io/anemll/dspark-vllm-gx10:0.1.1}\n    container_name: ${TASK_NAME}-rank${NODE_RANK}\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"64gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n    gpus: all\n    devices:\n      - /dev/infiniband:/dev/infiniband\n    volumes:\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/cache/huggingface\n      - ${HOME}/.cache/vllm-cache:/cache/huggingface/vllm-cache\n      - ${DSPARK_TMP_HOST:-${HOME}/.cache/dspark-tmp}:/tmp\n    environment:\n      HF_HOME: /cache/huggingface\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载，避免启动时访问 HF\n      TRANSFORMERS_OFFLINE: \"${TRANSFORMERS_OFFLINE:-0}\"\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      # 挂载到宿主 vllm-cache 目录（kernel 编译/autotune 缓存持久化，容器重建不丢）\n      VLLM_CACHE_ROOT: /cache/huggingface/vllm-cache\n      # Issue #65/#117 (MiaAI-Lab)：Triton/TileLang/B12X-CuTeDSL JIT 编译缓存持久化到 HF 卷（容器重建不丢，避免推理中途重复 JIT）\n      TRITON_CACHE_DIR: /cache/huggingface/triton-cache\n      TILELANG_CACHE_DIR: /cache/huggingface/tilelang-cache\n      B12X_CUTE_COMPILE_CACHE_DIR: /cache/huggingface/b12x-cute-cache\n      DG_JIT_CACHE_DIR: /tmp/deep-gemm\n      VLLM_HOST_IP: \"${VLLM_HOST_IP:-}\"\n      VLLM_ALLOW_LONG_MAX_MODEL_LEN: \"${VLLM_ALLOW_LONG_MAX_MODEL_LEN:-1}\"\n      VLLM_SPARSE_INDEXER_MAX_LOGITS_MB: \"${VLLM_SPARSE_INDEXER_MAX_LOGITS_MB:-256}\"\n      VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: \"${VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS:-0}\"\n      ENABLE_VLLM_GB10_PATCH: \"${ENABLE_VLLM_GB10_PATCH:-0}\"\n      GB10_HYBRID_NVFP4_M_THRESHOLD: \"${GB10_HYBRID_NVFP4_M_THRESHOLD:-128}\"\n      VLLM_USE_FLASHINFER_SAMPLER: \"${VLLM_USE_FLASHINFER_SAMPLER:-1}\"\n      VLLM_USE_BREAKABLE_CUDAGRAPH: \"${VLLM_USE_BREAKABLE_CUDAGRAPH:-0}\"\n      VLLM_USE_B12X_MOE: \"${VLLM_USE_B12X_MOE:-1}\"\n      VLLM_B12X_W4A16_FORCE_BLOCKS_PER_SM: \"${VLLM_B12X_W4A16_FORCE_BLOCKS_PER_SM:-0}\"\n      VLLM_B12X_W4A16_FORCE_BLOCKS_MAX_M: \"${VLLM_B12X_W4A16_FORCE_BLOCKS_MAX_M:-16}\"\n      # CuTeDSL 编译目标锁定 GB10（sm_121a）：缺失时 b12x 可能在推理中途 JIT\n      # 慢速 W4A16 fused MoE 路径而非 GB10 原生 kernel（上游实测确认）\n      CUTE_DSL_ARCH: \"${CUTE_DSL_ARCH:-sm_121a}\"\n      FLASHINFER_DISABLE_VERSION_CHECK: \"${FLASHINFER_DISABLE_VERSION_CHECK:-1}\"\n      FLASHINFER_WORKSPACE_BASE: \"${FLASHINFER_WORKSPACE_BASE:-/cache/huggingface/flashinfer}\"\n      TILELANG_CLEANUP_TEMP_FILES: \"${TILELANG_CLEANUP_TEMP_FILES:-1}\"\n      DG_JIT_USE_NVRTC: \"${DG_JIT_USE_NVRTC:-0}\"\n      DG_JIT_NVCC_COMPILER: \"${DG_JIT_NVCC_COMPILER:-/usr/local/cuda/bin/nvcc}\"\n      TORCH_CUDA_ARCH_LIST: \"${TORCH_CUDA_ARCH_LIST:-12.1a}\"\n      FLASHINFER_CUDA_ARCH_LIST: \"${FLASHINFER_CUDA_ARCH_LIST:-12.1a}\"\n      NCCL_NET: \"${NCCL_NET:-IB}\"\n      NCCL_IB_HCA: \"${NCCL_IB_HCA:-}\"\n      NCCL_SOCKET_IFNAME: \"${NCCL_SOCKET_IFNAME:-}\"\n      # TP/GLOO 与 NCCL 同网卡（mp 后端分布式通信不落到默认路由）\n      TP_SOCKET_IFNAME: \"${TP_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      GLOO_SOCKET_IFNAME: \"${GLOO_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      NCCL_IB_GID_INDEX: \"${NCCL_IB_GID_INDEX:-}\"\n      NCCL_IB_GID_AUTO: \"1\"\n      NCCL_IB_ADDR_FAMILY: AF_INET\n      NCCL_IB_ROCE_VERSION_NUM: 2\n      NCCL_IB_DISABLE: \"0\"\n      NCCL_CROSS_NIC: \"1\"\n      NCCL_NVLS_ENABLE: \"0\"\n      NCCL_CUMEM_ENABLE: \"0\"\n      NCCL_IGNORE_CPU_AFFINITY: \"1\"\n      NCCL_DEBUG: WARN\n      # 投机解码 k 必须 ≥ checkpoint dspark_block_size(5)：k<5 静默截断草稿块\n      # 放入容器环境，使命令内 $${MTP_NUM_TOKENS} 展开为真实值（.env 只影响 compose 插值）\n      MTP_NUM_TOKENS: \"${MTP_NUM_TOKENS:-5}\"\n      DEFAULT_THINKING: \"${DEFAULT_THINKING:-max}\"\n      # Issue #26 (MiaAI-Lab)：稀疏化 SWA prefix-cache 检查点，长上下文前缀命中\n      VLLM_PREFIX_CACHE_RETENTION_INTERVAL: \"${VLLM_PREFIX_CACHE_RETENTION_INTERVAL:-4096}\"\n      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True\n    command:\n      - bash\n      - -lc\n      - >\n        export PATH=\"/usr/local/cuda/bin:/usr/local/bin:$${PATH:-}\";\n        export CUDA_HOME=\"$${CUDA_HOME:-/usr/local/cuda}\";\n        export CUDA_PATH=\"$${CUDA_PATH:-$${CUDA_HOME}}\";\n        export CUDAToolkit_ROOT=\"$${CUDAToolkit_ROOT:-$${CUDA_HOME}}\";\n        export LD_LIBRARY_PATH=\"/usr/local/cuda/lib64:$${LD_LIBRARY_PATH:-}\";\n        DEFAULT_THINKING_MODE=\"$${DEFAULT_THINKING:-max}\";\n        case \"$${DEFAULT_THINKING_MODE}\" in\n          off) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":false}' ;;\n          low) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":true,\"reasoning_effort\":\"low\"}' ;;\n          high) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":true,\"reasoning_effort\":\"high\"}' ;;\n          max) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":true,\"reasoning_effort\":\"max\"}' ;;\n          *) echo \"DEFAULT_THINKING 必须为 off/low/high/max（当前: $${DEFAULT_THINKING_MODE}）\" >&2; exit 2 ;;\n        esac;\n        SPECULATIVE_CONFIG=\"{\\\"method\\\":\\\"dspark\\\",\\\"num_speculative_tokens\\\":$${MTP_NUM_TOKENS:-5},\\\"draft_sample_method\\\":\\\"probabilistic\\\"}\";\n        exec /usr/local/bin/vllm serve ${DSPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731}\n        --served-model-name ${SERVED_MODEL_NAME:-deepseek-v4-flash-0731}\n        --host ${VLLM_HOST:-0.0.0.0}\n        --port ${VLLM_PORT:-8888}\n        --trust-remote-code\n        --tensor-parallel-size 2\n        --pipeline-parallel-size 1\n        --kv-cache-dtype nvfp4_ds_mla\n        --block-size 256\n        --max-model-len ${MAX_MODEL_LEN:-1048576}\n        --max-num-seqs ${MAX_NUM_SEQS:-6}\n        --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-8192}\n        --long-prefill-token-threshold ${LONG_PREFILL_TOKEN_THRESHOLD:-1024}\n        --max-cudagraph-capture-size $$(( ${MAX_NUM_SEQS:-6} * (${MTP_NUM_TOKENS:-5} + 1) ))\n        --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.835}\n        --enable-prefix-caching\n        --enable-prompt-tokens-details\n        --async-scheduling\n        --enable-chunked-prefill\n        --speculative-config \"$${SPECULATIVE_CONFIG}\"\n        --tokenizer-mode deepseek_v4\n        --distributed-executor-backend mp\n        --moe-backend flashinfer_b12x\n        --tool-call-parser deepseek_v4\n        --enable-auto-tool-choice\n        --reasoning-parser deepseek_v4\n        --reasoning-config '{\"reasoning_parser\":\"deepseek_v4\",\"reasoning_start_str\":\"<think>\",\"reasoning_end_str\":\"</think>\"}'\n        --default-chat-template-kwargs \"$${DEFAULT_CHAT_TEMPLATE_KWARGS}\"\n        --generation-config vllm\n        --enable-flashinfer-autotune\n        --nnodes ${NODES_TOTAL:-2}\n        --node-rank ${NODE_RANK}\n        --master-addr ${MASTER_ADDR}\n        --master-port ${MASTER_PORT:-25000}\n        ${HEADLESS:+--headless}\n",
+  "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix",
+  "compose_template": "services:\n  vllm-dspark:\n    image: ${DSPARK_VLLM_IMAGE:-registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix}\n    container_name: ${TASK_NAME}-rank${NODE_RANK}\n    pull_policy: if_not_present\n    network_mode: host\n    ipc: host\n    shm_size: \"64gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n    gpus: all\n    devices:\n      - /dev/infiniband:/dev/infiniband\n    volumes:\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/cache/huggingface\n      - ${HOME}/.cache/vllm-cache:/cache/huggingface/vllm-cache\n      - ${DSPARK_TMP_HOST:-${HOME}/.cache/dspark-tmp}:/tmp\n    environment:\n      HF_HOME: /cache/huggingface\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载，避免启动时访问 HF\n      TRANSFORMERS_OFFLINE: \"${TRANSFORMERS_OFFLINE:-0}\"\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      DSPARK_MODEL: \"${DSPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731}\"\n      DSPARK_REVISION: \"${DSPARK_REVISION:-}\"\n      SERVED_MODEL_NAME: \"${SERVED_MODEL_NAME:-deepseek-v4-flash-0731}\"\n      VLLM_PORT: \"${VLLM_PORT:-8888}\"\n      MAX_MODEL_LEN: \"${MAX_MODEL_LEN:-1048576}\"\n      MAX_NUM_SEQS: \"${MAX_NUM_SEQS:-6}\"\n      MAX_NUM_BATCHED_TOKENS: \"${MAX_NUM_BATCHED_TOKENS:-8192}\"\n      LONG_PREFILL_TOKEN_THRESHOLD: \"${LONG_PREFILL_TOKEN_THRESHOLD:-1024}\"\n      GPU_MEMORY_UTILIZATION: \"${GPU_MEMORY_UTILIZATION:-0.835}\"\n      MTP_NUM_TOKENS: \"${MTP_NUM_TOKENS:-5}\"\n      DEFAULT_THINKING: \"${DEFAULT_THINKING:-max}\"\n      DRAFT_SAMPLE_METHOD: \"${DRAFT_SAMPLE_METHOD:-probabilistic}\"\n      VLLM_HOST_IP: \"${VLLM_HOST_IP:-}\"\n      # JIT 编译缓存持久化（HF 卷，容器重建不丢；镜像入口脚本 + vLLM 运行时消费）\n      VLLM_CACHE_ROOT: /cache/huggingface/vllm-cache\n      TRITON_CACHE_DIR: /cache/huggingface/triton-cache\n      TILELANG_CACHE_DIR: /cache/huggingface/tilelang-cache\n      B12X_CUTE_COMPILE_CACHE_DIR: /cache/huggingface/b12x-cute-cache\n      DG_JIT_CACHE_DIR: /tmp/deep-gemm\n      VLLM_PREFIX_CACHE_RETENTION_INTERVAL: \"${VLLM_PREFIX_CACHE_RETENTION_INTERVAL:-4096}\"\n      VLLM_SPARSE_INDEXER_MAX_LOGITS_MB: \"${VLLM_SPARSE_INDEXER_MAX_LOGITS_MB:-256}\"\n      VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS: \"${VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS:-1800}\"\n      VLLM_ALLOW_LONG_MAX_MODEL_LEN: \"${VLLM_ALLOW_LONG_MAX_MODEL_LEN:-1}\"\n      # 热修复开关（镜像内 bake 的 Mia 入口脚本消费，fail-closed）\n      DSPARK_SKIP_HOTFIX: \"${DSPARK_SKIP_HOTFIX:-0}\"\n      DSPARK_SKIP_ISSUE22_HOTFIX: \"${DSPARK_SKIP_ISSUE22_HOTFIX:-0}\"\n      DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX: \"${DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX:-0}\"\n      DSPARK_SUPPRESS_STOPS_IN_REASONING: \"${DSPARK_SUPPRESS_STOPS_IN_REASONING:-1}\"\n      DSPARK_MAX_INFLIGHT_PREFILLS: \"${DSPARK_MAX_INFLIGHT_PREFILLS:-2}\"\n      DSPARK_ISSUE43_SCHED_DIAG: \"${DSPARK_ISSUE43_SCHED_DIAG:-0}\"\n      DSPARK_ENABLE_ISSUE31_GPU_HOTFIX: \"${DSPARK_ENABLE_ISSUE31_GPU_HOTFIX:-0}\"\n      DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX: \"${DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX:-0}\"\n      DSPARK_API_KEYS: \"${DSPARK_API_KEYS:-}\"\n      # 分布式 / NCCL（Fireworks 自动填充 MASTER_ADDR / NODE_RANK / HEADLESS / VLLM_HOST_IP / NCCL_*）\n      MASTER_ADDR: \"${MASTER_ADDR}\"\n      MASTER_PORT: \"${MASTER_PORT:-25000}\"\n      NODES_TOTAL: \"${NODES_TOTAL:-2}\"\n      NODE_RANK: \"${NODE_RANK}\"\n      HEADLESS: \"${HEADLESS:-}\"\n      NCCL_NET: \"${NCCL_NET:-IB}\"\n      NCCL_IB_HCA: \"${NCCL_IB_HCA:-}\"\n      NCCL_SOCKET_IFNAME: \"${NCCL_SOCKET_IFNAME:-}\"\n      TP_SOCKET_IFNAME: \"${TP_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      GLOO_SOCKET_IFNAME: \"${GLOO_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      NCCL_IB_GID_INDEX: \"${NCCL_IB_GID_INDEX:-}\"\n      NCCL_IB_GID_AUTO: \"1\"\n      NCCL_IB_MERGE_NICS: \"${NCCL_IB_MERGE_NICS:-}\"\n      NCCL_NET_GDR_LEVEL: \"${NCCL_NET_GDR_LEVEL:-}\"\n      NCCL_NET_GDR_READ: \"${NCCL_NET_GDR_READ:-}\"\n      NCCL_DMABUF_ENABLE: \"${NCCL_DMABUF_ENABLE:-}\"\n      NCCL_IB_ADDR_FAMILY: AF_INET\n      NCCL_IB_ROCE_VERSION_NUM: 2\n      NCCL_CROSS_NIC: \"1\"\n      NCCL_NVLS_ENABLE: \"0\"\n      NCCL_CUMEM_ENABLE: \"0\"\n      NCCL_IGNORE_CPU_AFFINITY: \"1\"\n      NCCL_DEBUG: WARN\n      CUTE_DSL_ARCH: \"${CUTE_DSL_ARCH:-sm_121a}\"\n      TORCH_CUDA_ARCH_LIST: \"${TORCH_CUDA_ARCH_LIST:-12.1a}\"\n      FLASHINFER_CUDA_ARCH_LIST: \"${FLASHINFER_CUDA_ARCH_LIST:-12.1a}\"\n      FLASHINFER_DISABLE_VERSION_CHECK: \"${FLASHINFER_DISABLE_VERSION_CHECK:-1}\"\n      FLASHINFER_WORKSPACE_BASE: \"${FLASHINFER_WORKSPACE_BASE:-/cache/huggingface/flashinfer}\"\n      TORCH_FR_BUFFER_SIZE: \"${TORCH_FR_BUFFER_SIZE:-2000}\"\n      TORCH_NCCL_DUMP_ON_TIMEOUT: \"${TORCH_NCCL_DUMP_ON_TIMEOUT:-1}\"\n      TORCH_NCCL_ENABLE_MONITORING: \"${TORCH_NCCL_ENABLE_MONITORING:-1}\"\n      TORCH_FR_DUMP_TEMP_FILE: \"${TORCH_FR_DUMP_TEMP_FILE:-/cache/huggingface/nccl-fr/comm_lib_trace_rank_}\"\n      TORCH_NCCL_DEBUG_INFO_PIPE_FILE: \"${TORCH_NCCL_DEBUG_INFO_PIPE_FILE:-/tmp/fr_dump_pipe_}\"\n      VLLM_USE_FLASHINFER_SAMPLER: \"${VLLM_USE_FLASHINFER_SAMPLER:-1}\"\n      VLLM_USE_BREAKABLE_CUDAGRAPH: \"${VLLM_USE_BREAKABLE_CUDAGRAPH:-0}\"\n      VLLM_USE_B12X_MOE: \"${VLLM_USE_B12X_MOE:-1}\"\n      VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: \"${VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS:-0}\"\n      PYTORCH_CUDA_ALLOC_CONF: \"${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}\"\n    # 无 command/entrypoint 覆盖：镜像内 /opt/dspark/entrypoint.sh 应用热修复后 exec vllm serve\n",
   "variables": [
     {
       "key": "DSPARK_VLLM_IMAGE",
       "label": "vLLM 镜像",
       "type": "string",
       "source": "user",
-      "default": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
+      "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix",
       "picker": "image",
-      "help": "从已拉取镜像中选择（控制平面先拉取再分发）",
+      "help": "Mia 热修复烘焙镜像（已内置完整 fail-closed 热修复链）",
       "label_en": "vLLM image",
-      "help_en": "Pick from pulled images (control plane pulls then distributes)"
+      "help_en": "Mia hotfix-baked image (full fail-closed hotfix chain included)"
     },
     {
       "key": "DSPARK_MODEL",
@@ -93,9 +93,9 @@
       "type": "int",
       "source": "user",
       "default": "1024",
-      "help": "超过该 prefill token 量则分块（--long-prefill-token-threshold），防止长 prefill 挤占 decode 通道（Mia 上游 #27）",
+      "help": "超过该 prefill token 量则分块，防止长 prefill 挤占 decode 通道（Mia #27）",
       "label_en": "Long-prefill token threshold",
-      "help_en": "Prefills above this token count are chunked (--long-prefill-token-threshold), keeping decode lanes fed (upstream #27)"
+      "help_en": "Prefills above this count are chunked, keeping decode lanes fed (Mia #27)"
     },
     {
       "key": "VLLM_PREFIX_CACHE_RETENTION_INTERVAL",
@@ -103,9 +103,9 @@
       "type": "int",
       "source": "user",
       "default": "4096",
-      "help": "SWA prefix-cache 检查点间隔（Mia 上游 #26）；默认 4096，仅在调试命中率时调整",
+      "help": "SWA prefix-cache 检查点间隔（Mia #26）；默认 4096，仅在调试命中率时调整",
       "label_en": "Prefix-cache retention interval",
-      "help_en": "SWA prefix-cache checkpoint spacing (upstream #26); default 4096, tune only when debugging cache hits"
+      "help_en": "SWA prefix-cache checkpoint spacing (Mia #26); default 4096, tune only when debugging cache hits"
     },
     {
       "key": "DEFAULT_THINKING",
@@ -113,9 +113,9 @@
       "type": "string",
       "source": "user",
       "default": "max",
-      "help": "默认 max（与 Mia 配方一致）；off 不生成思考（最快）；low/high/max 开启思考并控制 reasoning effort；请求级参数可覆盖。注意 max 推理很长，需给足 max_tokens",
+      "help": "默认 max（与 Mia 配方一致）；off 不生成思考（最快）；low/high/max 开启思考并控制 reasoning effort。注意 max 推理很长，需给足 max_tokens",
       "label_en": "Default thinking mode",
-      "help_en": "Default max (matches the Mia recipe); off: no thinking (fastest); low/high/max: thinking with reasoning effort; overridable per request. max reasoning is long - size max_tokens accordingly"
+      "help_en": "Default max (matches the Mia recipe); off: no thinking; low/high/max: thinking with reasoning effort. max reasoning is long - size max_tokens accordingly"
     },
     {
       "key": "MASTER_ADDR",
@@ -201,9 +201,109 @@
       "auto": "gid_index",
       "help": "每节点/HCA 不同且重启漂移，自动解析",
       "label_en": "RoCE GID index"
+    },
+    {
+      "key": "DSPARK_REVISION",
+      "label": "官方 0731 revision",
+      "type": "string",
+      "source": "user",
+      "default": "9e165c30e2704aec5d9d593cce3eebd58bbef1cb",
+      "help": "模型快照 revision（固定加载与推理一致的权重）；清空即不传 --revision",
+      "help_en": "Model snapshot revision pin; empty = no --revision",
+      "label_en": "Official 0731 revision"
+    },
+    {
+      "key": "DSPARK_SKIP_HOTFIX",
+      "label": "跳过 v0.27 perf 回移植",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "1 = 跳过 6 个 v0.27 性能回移植热修复（#50312/#49486/#48407/#48957/#50298/grammar-advance）",
+      "help_en": "1 = skip the six v0.27 perf backport hotfixes",
+      "label_en": "Skip v0.27 perf backports"
+    },
+    {
+      "key": "DSPARK_SKIP_ISSUE22_HOTFIX",
+      "label": "跳过 #22 长上下文修复",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "1 = 跳过 nvfp4_ds_mla 长上下文解码修复（不推荐）",
+      "help_en": "1 = skip the nvfp4_ds_mla long-context decode fix (not recommended)",
+      "label_en": "Skip #22 hotfix"
+    },
+    {
+      "key": "DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX",
+      "label": "跳过 stop-stops 修复",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "1 = 不应用 suppress-stops-in-reasoning 补丁（客户端 stop 可能在思考中触发）",
+      "help_en": "1 = do not apply the suppress-stops-in-reasoning patch",
+      "label_en": "Skip suppress-stops fix"
+    },
+    {
+      "key": "DSPARK_SUPPRESS_STOPS_IN_REASONING",
+      "label": "抑制思考中的 stop",
+      "type": "string",
+      "source": "user",
+      "default": "1",
+      "help": "1（默认）= 客户端 stop 字符串在思考阶段保持休眠，#响应 后才生效",
+      "help_en": "1 (default) = client stop strings stay dormant inside thinking",
+      "label_en": "Suppress stops in reasoning"
+    },
+    {
+      "key": "DSPARK_MAX_INFLIGHT_PREFILLS",
+      "label": "并发 in-flight prefill 上限",
+      "type": "int",
+      "source": "user",
+      "default": "2",
+      "help": "#27 热修复：并发分块 prefill 数（1-3，默认 2）；1 = 恢复串行旧行为",
+      "help_en": "#27 hotfix: concurrent chunked prefills (1-3, default 2); 1 restores old serial behavior",
+      "label_en": "In-flight prefill cap"
+    },
+    {
+      "key": "DSPARK_ISSUE43_SCHED_DIAG",
+      "label": "#43 调度诊断日志",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "1 = 每步输出调度行（scheduled prefill/decode）用于诊断",
+      "help_en": "1 = one scheduler line per step in the vLLM log (diagnostics)",
+      "label_en": "#43 scheduler diagnostics"
+    },
+    {
+      "key": "DSPARK_ENABLE_ISSUE31_GPU_HOTFIX",
+      "label": "启用 thinking_token_budget",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "1 = 应用 GPU thinking_token_budget 热修复（默认 stock V2，请求发该字段会 400）",
+      "help_en": "1 = apply the GPU thinking_token_budget hotfix (stock V2 rejects the field with 400)",
+      "label_en": "Enable thinking_token_budget"
+    },
+    {
+      "key": "DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX",
+      "label": "启用 assistant-final 热修复",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "1 = 消息以 assistant 结尾时补生成头（#52），默认 stock 渲染",
+      "help_en": "1 = append a generation header for assistant-final requests (#52); default stock",
+      "label_en": "Enable assistant-final hotfix"
+    },
+    {
+      "key": "DSPARK_API_KEYS",
+      "label": "多 Key API 认证",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "空格分隔的 key 列表，开启 OpenAI 端点认证（之一即可）；留空 = 无认证；与 VLLM_API_KEY 同时设置会启动失败",
+      "help_en": "Space-separated API keys (any one authorizes); empty = no auth; mutually exclusive with VLLM_API_KEY",
+      "label_en": "Multi-key API auth"
     }
   ],
-  "version": "1.1.0",
+  "version": "1.2.0",
   "nodes": 2,
   "name_en": "DeepSeek-V4-Flash MiaAI-Lab",
   "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash: Anemll distribution image, FlashInfer b12x + dspark speculation, NVFP4 DS-MLA, 1M context."
