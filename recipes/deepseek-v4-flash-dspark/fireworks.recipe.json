@@ -207,9 +207,9 @@
       "label": "官方 0731 revision",
       "type": "string",
       "source": "user",
-      "default": "9e165c30e2704aec5d9d593cce3eebd58bbef1cb",
-      "help": "模型快照 revision（固定加载与推理一致的权重）；清空即不传 --revision",
-      "help_en": "Model snapshot revision pin; empty = no --revision",
+      "default": "",
+      "help": "留空（默认）= 入口脚本自动解析本地 HF 缓存中最新快照的 commit sha，离线可加载；显式设置时必须是实际分发快照的真实 commit，否则离线会 LocalEntryNotFoundError",
+      "help_en": "Empty (default) = entrypoint auto-resolves the newest cached snapshot sha so offline load works; if set, it must be the exact distributed commit or offline load fails with LocalEntryNotFoundError",
       "label_en": "Official 0731 revision"
     },
     {
@@ -303,7 +303,7 @@
       "label_en": "Multi-key API auth"
     }
   ],
-  "version": "1.2.0",
+  "version": "1.2.1",
   "nodes": 2,
   "name_en": "DeepSeek-V4-Flash MiaAI-Lab",
   "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash: Anemll distribution image, FlashInfer b12x + dspark speculation, NVFP4 DS-MLA, 1M context."

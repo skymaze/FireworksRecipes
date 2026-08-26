@@ -8,7 +8,8 @@ Serves DeepSeek-V4-Flash on **exactly 2** DGX Spark nodes (head + 1 worker over 
 - Topology: **fixed 2 nodes · TP=2**; FlashInfer b12x + dspark speculation · NVFP4 DS-MLA ·
   1M context
 - Model: `deepseek-ai/DeepSeek-V4-Flash-0731` (~167 GB, distributed by Fireworks, loaded
-  offline; revision pinned to `9e165c30…` by default)
+  offline; `DSPARK_REVISION` defaults to empty = entrypoint auto-resolves the local cached
+  snapshot's commit sha, so offline load is safe)
 - Served name: `deepseek-v4-flash-0731`
 
 > This recipe uses a distribution image with the full Mia hotfix chain baked in
@@ -33,7 +34,7 @@ Before publishing from Fireworks:
 |---|---|---|
 | `DSPARK_VLLM_IMAGE` | `…/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix` | Mia hotfix-baked image |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | Downloaded model |
-| `DSPARK_REVISION` | `9e165c30…` | Model snapshot revision pin |
+| `DSPARK_REVISION` | empty | Empty=auto-use cached snapshot sha (offline-safe); explicit pin must match the snapshot |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-0731` | Served model name |
 | `VLLM_PORT` | `8888` | vLLM API port |
 | `MAX_MODEL_LEN` | `1048576` | 1M context |

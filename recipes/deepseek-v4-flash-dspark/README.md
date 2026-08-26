@@ -8,7 +8,7 @@ DeepSeek-V4-Flash：
   热修复链**，启动时应用到 `vllm serve` 前）
 - 拓扑：**固定 2 节点 · TP=2**，FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文
 - 模型：`deepseek-ai/DeepSeek-V4-Flash-0731`（约 167GB，Fireworks 分发后离线加载；
-  revision 默认钉在 `9e165c30…`）
+  `DSPARK_REVISION` 默认留空 = 启动时自动使用本地缓存快照的 commit sha，离线安全）
 - 对外服务名：`deepseek-v4-flash-0731`
 
 > 本配方直接使用烘焙了 Mia 热修复链的分发镜像（镜像内 `/opt/dspark/entrypoint.sh` 在
@@ -31,7 +31,7 @@ DeepSeek-V4-Flash：
 |---|---|---|
 | `DSPARK_VLLM_IMAGE` | `…/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix` | Mia 热修复烘焙镜像 |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | 已下载模型 |
-| `DSPARK_REVISION` | `9e165c30…` | 模型快照 revision 钉住 |
+| `DSPARK_REVISION` | 空 | 留空=自动用本地缓存快照 sha（离线安全）；显式钉住须匹配实际快照 |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-0731` | 对外服务名 |
 | `VLLM_PORT` | `8888` | vLLM API 端口 |
 | `MAX_MODEL_LEN` | `1048576` | 1M 上下文 |

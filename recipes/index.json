@@ -11,7 +11,7 @@
       "path": "recipes/deepseek-v4-flash-dspark/fireworks.recipe.json",
       "readme": "recipes/deepseek-v4-flash-dspark/README.md",
       "readme_en": "recipes/deepseek-v4-flash-dspark/README.en.md",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "params": "284B/13B",
       "context_length": 1048576,
       "modality": "text",
