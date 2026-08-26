@@ -33,7 +33,7 @@ DeepSeek-V4-Flash：
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | 已下载模型 |
 | `DSPARK_REVISION` | 空 | 留空=自动用本地缓存快照 sha（离线安全）；显式钉住须匹配实际快照 |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-0731` | 对外服务名 |
-| `VLLM_PORT` | `8888` | vLLM API 端口 |
+| `VLLM_PORT` | `8888` | API 端口（仅 `--port`，已与 vLLM 内部端口解耦） |
 | `MAX_MODEL_LEN` | `1048576` | 1M 上下文 |
 | `MAX_NUM_SEQS` | `6` | 最大并发序列数 |
 | `MAX_NUM_BATCHED_TOKENS` | `8192` | 单批最大 token 数 |

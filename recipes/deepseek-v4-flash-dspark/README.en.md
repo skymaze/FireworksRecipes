@@ -36,7 +36,7 @@ Before publishing from Fireworks:
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | Downloaded model |
 | `DSPARK_REVISION` | empty | Empty=auto-use cached snapshot sha (offline-safe); explicit pin must match the snapshot |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-0731` | Served model name |
-| `VLLM_PORT` | `8888` | vLLM API port |
+| `VLLM_PORT` | `8888` | API port (serve `--port` only; decoupled from vLLM internal ports) |
 | `MAX_MODEL_LEN` | `1048576` | 1M context |
 | `MAX_NUM_SEQS` | `6` | Max concurrent sequences |
 | `MAX_NUM_BATCHED_TOKENS` | `8192` | Max batched tokens |
