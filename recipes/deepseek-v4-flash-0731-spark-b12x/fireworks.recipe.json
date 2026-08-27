@@ -1,0 +1,224 @@
+{
+  "name": "DeepSeek-V4-Flash Spark-vLLM b12x",
+  "description": "DeepSeek-V4-Flash-0731 双节点 TP=2 Spark-vLLM 服务：eugr/spark-vllm-b12x 镜像、B12X MLA SPARSE 注意力 + b12x MoE/线性层、dspark 投机 k=5、FP8 KV 缓存、instanttensor 加载 + AOT 编译、1M 上下文。",
+  "image": "eugr/spark-vllm-b12x:latest",
+  "compose_template": "services:\n  vllm-spark:\n    image: ${SPARK_VLLM_IMAGE:-eugr/spark-vllm-b12x:latest}\n    container_name: ${TASK_NAME}-rank${NODE_RANK}\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"64gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n    gpus: all\n    devices:\n      - /dev/infiniband:/dev/infiniband\n    volumes:\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/cache/huggingface\n      - ${HOME}/.cache/vllm-cache:/cache/huggingface/vllm-cache\n      - ${SPARK_TMP_HOST:-${HOME}/.cache/spark-tmp}:/tmp\n    environment:\n      HF_HOME: /cache/huggingface\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载，避免启动时访问 HF\n      TRANSFORMERS_OFFLINE: \"${TRANSFORMERS_OFFLINE:-0}\"\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      # 挂载到宿主 vllm-cache 目录（kernel 编译/AOT/autotune 缓存持久化，容器重建不丢）\n      VLLM_CACHE_ROOT: /cache/huggingface/vllm-cache\n      VLLM_HOST_IP: \"${VLLM_HOST_IP:-}\"\n      VLLM_ALLOW_LONG_MAX_MODEL_LEN: \"${VLLM_ALLOW_LONG_MAX_MODEL_LEN:-1}\"\n      VLLM_SPARSE_INDEXER_MAX_LOGITS_MB: \"${VLLM_SPARSE_INDEXER_MAX_LOGITS_MB:-256}\"\n      VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS: \"${VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS:-0}\"\n      # spark-vllm-b12x 镜像特性开关（源 docker run 的 -e 原样带入，可覆盖）\n      VLLM_USE_AOT_COMPILE: \"${VLLM_USE_AOT_COMPILE:-1}\"\n      VLLM_USE_MEGA_AOT_ARTIFACT: \"${VLLM_USE_MEGA_AOT_ARTIFACT:--1}\"\n      VLLM_MEMORY_PROFILE_INCLUDE_ATTN: \"${VLLM_MEMORY_PROFILE_INCLUDE_ATTN:-1}\"\n      VLLM_USE_FLASHINFER_SAMPLER: \"${VLLM_USE_FLASHINFER_SAMPLER:-1}\"\n      VLLM_USE_BREAKABLE_CUDAGRAPH: \"${VLLM_USE_BREAKABLE_CUDAGRAPH:-0}\"\n      VLLM_USE_B12X_WO_PROJECTION: \"${VLLM_USE_B12X_WO_PROJECTION:-1}\"\n      VLLM_USE_B12X_MHC: \"${VLLM_USE_B12X_MHC:-1}\"\n      VLLM_USE_B12X_FP8_GEMM: \"${VLLM_USE_B12X_FP8_GEMM:-1}\"\n      VLLM_USE_B12X_MOE: \"${VLLM_USE_B12X_MOE:-1}\"\n      VLLM_USE_B12X_SPARSE_INDEXER: \"${VLLM_USE_B12X_SPARSE_INDEXER:-1}\"\n      VLLM_USE_V2_MODEL_RUNNER: \"${VLLM_USE_V2_MODEL_RUNNER:-1}\"\n      B12X_MLA_SM120_UNIFIED: \"${B12X_MLA_SM120_UNIFIED:-1}\"\n      B12X_MOE_FORCE_A8: \"${B12X_MOE_FORCE_A8:-1}\"\n      # CuTeDSL 编译目标锁定 GB10（sm_121a）\n      CUTE_DSL_ARCH: \"${CUTE_DSL_ARCH:-sm_121a}\"\n      FLASHINFER_DISABLE_VERSION_CHECK: \"${FLASHINFER_DISABLE_VERSION_CHECK:-1}\"\n      FLASHINFER_WORKSPACE_BASE: \"${FLASHINFER_WORKSPACE_BASE:-/cache/huggingface/flashinfer}\"\n      TILELANG_CLEANUP_TEMP_FILES: \"${TILELANG_CLEANUP_TEMP_FILES:-1}\"\n      TORCH_CUDA_ARCH_LIST: \"${TORCH_CUDA_ARCH_LIST:-12.1a}\"\n      FLASHINFER_CUDA_ARCH_LIST: \"${FLASHINFER_CUDA_ARCH_LIST:-12.1a}\"\n      # 网络：原命令的 $IFACE_NAME/$IB_IF 为宿主 shell 变量，这里映射为自动填充的\n      # NCCL_SOCKET_IFNAME(netdev)/NCCL_IB_HCA(hca)，GLOO/TP/MN/OMPI/UCX 同网卡\n      NCCL_NET: \"${NCCL_NET:-IB}\"\n      NCCL_IB_HCA: \"${NCCL_IB_HCA:-}\"\n      NCCL_SOCKET_IFNAME: \"${NCCL_SOCKET_IFNAME:-}\"\n      TP_SOCKET_IFNAME: \"${TP_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      GLOO_SOCKET_IFNAME: \"${GLOO_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      MN_IF_NAME: \"${MN_IF_NAME:-${NCCL_SOCKET_IFNAME}}\"\n      OMPI_MCA_btl_tcp_if_include: \"${OMPI_MCA_btl_tcp_if_include:-${NCCL_SOCKET_IFNAME}}\"\n      UCX_NET_DEVICES: \"${UCX_NET_DEVICES:-${NCCL_SOCKET_IFNAME}}\"\n      NCCL_IB_GID_INDEX: \"${NCCL_IB_GID_INDEX:-}\"\n      NCCL_IB_GID_AUTO: \"1\"\n      NCCL_IB_ADDR_FAMILY: AF_INET\n      NCCL_IB_ROCE_VERSION_NUM: 2\n      NCCL_IB_DISABLE: \"0\"\n      NCCL_CROSS_NIC: \"1\"\n      NCCL_NVLS_ENABLE: \"0\"\n      NCCL_CUMEM_ENABLE: \"0\"\n      NCCL_IGNORE_CPU_AFFINITY: \"1\"\n      NCCL_DEBUG: WARN\n      # 投机解码 k 必须 ≥ checkpoint dspark_block_size(5)：k<5 静默截断草稿块\n      # 放入容器环境，使命令内 $${MTP_NUM_TOKENS} 展开为真实值（.env 只影响 compose 插值）\n      MTP_NUM_TOKENS: \"${MTP_NUM_TOKENS:-5}\"\n      # cudagraph 编译模式与生成覆盖（JSON，容器内经 $${COMPILATION_CONFIG} 展开）\n      COMPILATION_CONFIG: \"${COMPILATION_CONFIG:-{\\\"cudagraph_mode\\\":\\\"FULL_AND_PIECEWISE\\\",\\\"custom_ops\\\":[\\\"all\\\"]}}\"\n      DEFAULT_THINKING: \"${DEFAULT_THINKING:-high}\"\n      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True\n    command:\n      - bash\n      - -lc\n      - >\n        export PATH=\"/usr/local/cuda/bin:/usr/local/bin:$${PATH:-}\";\n        export CUDA_HOME=\"$${CUDA_HOME:-/usr/local/cuda}\";\n        export CUDA_PATH=\"$${CUDA_PATH:-$${CUDA_HOME}}\";\n        export CUDAToolkit_ROOT=\"$${CUDAToolkit_ROOT:-$${CUDA_HOME}}\";\n        export LD_LIBRARY_PATH=\"/usr/local/cuda/lib64:$${LD_LIBRARY_PATH:-}\";\n        DEFAULT_THINKING_MODE=\"$${DEFAULT_THINKING:-high}\";\n        case \"$${DEFAULT_THINKING_MODE}\" in\n          off) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":false}' ;;\n          low) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":true,\"reasoning_effort\":\"low\"}' ;;\n          high) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":true,\"reasoning_effort\":\"high\"}' ;;\n          max) DEFAULT_CHAT_TEMPLATE_KWARGS='{\"thinking\":true,\"reasoning_effort\":\"max\"}' ;;\n          *) echo \"DEFAULT_THINKING 必须为 off/low/high/max（当前: $${DEFAULT_THINKING_MODE}）\" >&2; exit 2 ;;\n        esac;\n        SPECULATIVE_CONFIG=\"{\\\"method\\\":\\\"dspark\\\",\\\"num_speculative_tokens\\\":$${MTP_NUM_TOKENS:-5},\\\"draft_sample_method\\\":\\\"probabilistic\\\",\\\"attention_backend\\\":\\\"B12X_MLA_SPARSE\\\"}\";\n        [ -n \"$${COMPILATION_CONFIG:-}\" ] || COMPILATION_CONFIG='{\"cudagraph_mode\":\"FULL_AND_PIECEWISE\",\"custom_ops\":[\"all\"]}';\n        exec /usr/local/bin/vllm serve ${SPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731}\n        --served-model-name ${SERVED_MODEL_NAME:-deepseek-v4-flash}\n        --host ${VLLM_HOST:-0.0.0.0}\n        --port ${VLLM_PORT:-8000}\n        --trust-remote-code\n        --tensor-parallel-size 2\n        --pipeline-parallel-size 1\n        --kv-cache-dtype fp8\n        --block-size 256\n        --max-model-len ${MAX_MODEL_LEN:-1048576}\n        --max-num-seqs ${MAX_NUM_SEQS:-8}\n        --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-8192}\n        --max-cudagraph-capture-size ${MAX_CUDAGRAPH_CAPTURE_SIZE:-64}\n        --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}\n        --enable-prefix-caching\n        --enable-prompt-tokens-details\n        --async-scheduling\n        --enable-chunked-prefill\n        --load-format ${LOAD_FORMAT:-instanttensor}\n        --speculative-config \"$${SPECULATIVE_CONFIG}\"\n        --compilation-config \"$${COMPILATION_CONFIG}\"\n        --tokenizer-mode deepseek_v4\n        --distributed-executor-backend mp\n        --moe-backend b12x\n        --linear-backend b12x\n        --attention-backend B12X_MLA_SPARSE\n        --tool-call-parser deepseek_v4\n        --enable-auto-tool-choice\n        --reasoning-parser deepseek_v4\n        --reasoning-config '{\"reasoning_parser\":\"deepseek_v4\",\"reasoning_start_str\":\" thinking\",\"reasoning_end_str\":\" response\"}'\n        --default-chat-template-kwargs \"$${DEFAULT_CHAT_TEMPLATE_KWARGS}\"\n        --nnodes ${NODES_TOTAL:-2}\n        --node-rank ${NODE_RANK}\n        --master-addr ${MASTER_ADDR}\n        --master-port ${MASTER_PORT:-25000}\n        ${HEADLESS:+--headless}\n",
+  "variables": [
+    {
+      "key": "SPARK_VLLM_IMAGE",
+      "label": "vLLM 镜像",
+      "type": "string",
+      "source": "user",
+      "default": "eugr/spark-vllm-b12x:latest",
+      "picker": "image",
+      "help": "从已拉取镜像中选择（控制平面先拉取再分发）",
+      "label_en": "vLLM image",
+      "help_en": "Pick from pulled images (control plane pulls then distributes)"
+    },
+    {
+      "key": "SPARK_MODEL",
+      "label": "模型",
+      "type": "string",
+      "source": "user",
+      "default": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "required": true,
+      "picker": "model",
+      "help": "从已下载模型中选择（控制平面下载后分发到各节点缓存）",
+      "label_en": "Model",
+      "help_en": "Pick from downloaded models (control plane downloads and distributes)"
+    },
+    {
+      "key": "SERVED_MODEL_NAME",
+      "label": "对外服务名",
+      "type": "string",
+      "source": "user",
+      "default": "deepseek-v4-flash",
+      "label_en": "Served model name"
+    },
+    {
+      "key": "VLLM_PORT",
+      "label": "vLLM API 端口",
+      "type": "int",
+      "source": "user",
+      "default": "8000",
+      "label_en": "vLLM API port"
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "label": "最大上下文长度",
+      "type": "int",
+      "source": "user",
+      "default": "1048576",
+      "label_en": "Max context length"
+    },
+    {
+      "key": "MAX_NUM_SEQS",
+      "label": "最大并发序列数",
+      "type": "int",
+      "source": "user",
+      "default": "8",
+      "label_en": "Max concurrent sequences"
+    },
+    {
+      "key": "MAX_NUM_BATCHED_TOKENS",
+      "label": "单批最大 token 数",
+      "type": "int",
+      "source": "user",
+      "default": "8192",
+      "label_en": "Max batched tokens"
+    },
+    {
+      "key": "MAX_CUDAGRAPH_CAPTURE_SIZE",
+      "label": "CUDA Graph 捕获上限",
+      "type": "int",
+      "source": "user",
+      "default": "64",
+      "help": "源命令固定 64；既有 dspark 配方按 MAX_NUM_SEQS×(k+1)=48 计算，上调可兼容更大批次的图捕获但增加显存",
+      "label_en": "CUDA graph capture limit",
+      "help_en": "Source pinned 64; existing dspark recipes compute MAX_NUM_SEQS×(k+1)=48; raising it allows larger capture batches at more memory"
+    },
+    {
+      "key": "GPU_MEMORY_UTILIZATION",
+      "label": "GPU 显存利用率",
+      "type": "float",
+      "source": "user",
+      "default": "0.85",
+      "help": "源命令默认 0.85；既有配方实机验证 0.80 稳定，0.90 无法开机，偏高时请注意显存余量",
+      "label_en": "GPU memory utilization",
+      "help_en": "Source default 0.85; existing recipes validated 0.80 stable and 0.90 fails to boot"
+    },
+    {
+      "key": "LOAD_FORMAT",
+      "label": "模型加载格式",
+      "type": "string",
+      "source": "user",
+      "default": "instanttensor",
+      "help": "源命令为 instanttensor；若 Fireworks 分发的是标准 HF safetensors，请改为空(auto)或 safetensors",
+      "label_en": "Model load format",
+      "help_en": "Source uses instanttensor; if Fireworks distributes standard HF safetensors, set empty (auto) or safetensors"
+    },
+    {
+      "key": "MTP_NUM_TOKENS",
+      "label": "DSpark 投机 token 数",
+      "type": "int",
+      "source": "user",
+      "default": "5",
+      "help": "勿低于 checkpoint dspark_block_size(5)，否则草稿块被静默截断、解码吞吐下降",
+      "label_en": "DSpark speculative tokens",
+      "help_en": "Keep >= checkpoint dspark_block_size(5); below that draft blocks are silently truncated"
+    },
+    {
+      "key": "COMPILATION_CONFIG",
+      "label": "CUDA Graph 编译模式",
+      "type": "string",
+      "source": "user",
+      "default": "{\"cudagraph_mode\":\"FULL_AND_PIECEWISE\",\"custom_ops\":[\"all\"]}",
+      "help": "FULL_AND_PIECEWISE + custom_ops=all（源命令默认）；{} 恢复默认采集，FULL_DECODE_ONLY 只捕获 decode（既有配方实机验证零损耗）",
+      "label_en": "CUDA graph compilation mode",
+      "help_en": "FULL_AND_PIECEWISE + custom_ops all (source default); {} restores default capture; FULL_DECODE_ONLY captures decode only (verified cost-free in existing recipes)"
+    },
+    {
+      "key": "DEFAULT_THINKING",
+      "label": "默认思考模式",
+      "type": "string",
+      "source": "user",
+      "default": "high",
+      "help": "off 不生成思考（最快）；low/high/max 开启思考并控制 reasoning effort；请求级参数可覆盖",
+      "label_en": "Default thinking mode",
+      "help_en": "off: no thinking (fastest); low/high/max: thinking with reasoning effort; overridable per request"
+    },
+    {
+      "key": "MASTER_PORT",
+      "label": "分布式主端口",
+      "type": "int",
+      "source": "user",
+      "default": "25000",
+      "label_en": "Distributed master port"
+    },
+    {
+      "key": "MASTER_ADDR",
+      "label": "Head 节点地址",
+      "type": "string",
+      "source": "cluster",
+      "auto": "head_roce_ip",
+      "required": true,
+      "help": "自动填充 head 节点的 RoCE IP（多节点协调地址，随任务的 head 变化）",
+      "label_en": "Head address",
+      "help_en": "Filled with the head node's RoCE IP (multi-node coordination address, follows per-task head)"
+    },
+    {
+      "key": "NODES_TOTAL",
+      "label": "节点总数",
+      "type": "int",
+      "source": "cluster",
+      "auto": "nodes_total",
+      "required": true,
+      "help": "由任务节点数自动填充（本配方为固定 2 节点拓扑，发布时校验恰好匹配）",
+      "label_en": "Node count",
+      "help_en": "Auto-filled from task node count (fixed 2-node topology; publish validates exact match)"
+    },
+    {
+      "key": "NODE_RANK",
+      "label": "节点序号",
+      "type": "int",
+      "source": "node",
+      "auto": "node_rank",
+      "required": true,
+      "label_en": "Node rank"
+    },
+    {
+      "key": "HEADLESS",
+      "label": "Headless（worker 不跑 API server）",
+      "type": "string",
+      "source": "node",
+      "auto": "headless",
+      "help": "自动按角色填充：head 为空、worker 为 1（mp 多节点协调必需）",
+      "label_en": "Headless (worker: no API server)",
+      "help_en": "Headless (worker: no API server)"
+    },
+    {
+      "key": "VLLM_HOST_IP",
+      "label": "本节点 vLLM 绑定 IP",
+      "type": "string",
+      "source": "node",
+      "auto": "node_roce_ip",
+      "help": "必须为各节点 RoCE IP，避免分布式绑定错误地址",
+      "label_en": "Local vLLM bind IP",
+      "help_en": "Must be each node's RoCE IP to avoid binding the wrong address"
+    },
+    {
+      "key": "NCCL_IB_HCA",
+      "label": "RoCE HCA",
+      "type": "string",
+      "source": "node",
+      "auto": "hca",
+      "help": "如 rocep1s0f0",
+      "label_en": "RoCE HCA",
+      "help_en": "RoCE HCA"
+    },
+    {
+      "key": "NCCL_SOCKET_IFNAME",
+      "label": "NCCL 网络接口",
+      "type": "string",
+      "source": "node",
+      "auto": "netdev",
+      "help": "如 enp1s0f0np0",
+      "label_en": "NCCL network interface",
+      "help_en": "NCCL network interface"
+    },
+    {
+      "key": "NCCL_IB_GID_INDEX",
+      "label": "RoCE GID index",
+      "type": "int",
+      "source": "node",
+      "auto": "gid_index",
+      "help": "每节点/HCA 不同且重启漂移，自动解析",
+      "label_en": "RoCE GID index",
+      "help_en": "RoCE GID index"
+    }
+  ],
+  "version": "1.0.0",
+  "nodes": 2,
+  "name_en": "DeepSeek-V4-Flash Spark-vLLM b12x",
+  "description_en": "2-node TP=2 Spark-vLLM serving for DeepSeek-V4-Flash-0731: eugr/spark-vllm-b12x image, B12X MLA SPARSE attention + b12x MoE/linear, dspark speculation k=5, FP8 KV cache, instanttensor load with AOT compile, 1M context."
+}
