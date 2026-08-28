@@ -52,6 +52,18 @@
 `NODES_TOTAL`（固定 4）、`MASTER_ADDR`、`NODE_RANK`、`HEADLESS`、`VLLM_HOST_IP`、`NCCL_IB_*`
 均由 Fireworks 自动填充。
 
+## 发布注意（任务/项目命名）
+
+Fireworks 建任务时填的**任务名即 docker compose 项目名**，会原样传给节点 agent 的
+`/api/compose/up`。节点上的 **Docker Compose v5 只允许项目名由小写字母/数字/`-`/`_`
+组成、不能含点（`.`）**——任务名里若带 `5.3` 这类点（如 `glm5.3-flash-nv`），agent 的
+`compose up` 会在任何拉镜像/启动之前直接报 `invalid project name ... must consist only of
+lowercase alphanumeric characters, hyphens, and underscores`，控制面表现为 **502 Bad Gateway**
+（`http://<node>:9000/api/compose/up`）。
+
+请使用**无点任务名**再发布，例如 `glm53-flash-nv`、`glm53-flash-tp4-4x`；**不要**用
+`glm5.3-*`。
+
 ## 部署注意（源自源仓库实机踩坑）
 
 - **不要改**：`--block-size 2304`（DeepGEMM arch-12 要求 kpool 页 64 对齐；2176 会崩）、

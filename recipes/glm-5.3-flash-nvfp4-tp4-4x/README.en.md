@@ -57,6 +57,19 @@ speed-oriented lane):
 `NODES_TOTAL` (fixed 4), `MASTER_ADDR`, `NODE_RANK`, `HEADLESS`, `VLLM_HOST_IP`, `NCCL_IB_*`
 are all auto-filled by Fireworks.
 
+## Publish note (task / project naming)
+
+The **task name** you type when creating the task in Fireworks becomes the Docker Compose
+project name, passed verbatim to each node agent's `/api/compose/up`. The node-side
+**Docker Compose v5 only allows project names made of lowercase alphanumerics, hyphens and
+underscores — no dots (`.`)**. A task name containing a dot from `5.3` (e.g. `glm5.3-flash-nv`)
+makes `compose up` fail immediately with `invalid project name ... must consist only of
+lowercase alphanumeric characters, hyphens, and underscores` — surfaced by the control plane
+as a **502 Bad Gateway** on `http://<node>:9000/api/compose/up`.
+
+Use a **dot-free task name** when publishing, e.g. `glm53-flash-nv`, `glm53-flash-tp4-4x`;
+do **not** use `glm5.3-*`.
+
 ## Deployment notes (from upstream field experience)
 
 - Do **not** change: `--block-size 2304` (DeepGEMM arch-12 kpool page rule; 2176 dies),
