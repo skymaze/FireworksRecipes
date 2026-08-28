@@ -22,6 +22,7 @@ Current recipes:
 | GLM-5.3-Flash (Lane A) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | **4-node TP=4** · **fp8 KV** (FlashInfer SM12x unlock) · MTP k=4 · **1M context** · ~55 tok/s structured decode · NVFP4 quant (uncensored drop-in available) |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2` | **2-node TP=2** · fp8 KV + **DFlash2** (incoai drafter) · **262K context** · 46.9 tok/s single-stream · C1-C6 zero failures (upstream one-to-copy tier) |
 | GLM-5.3-Flash (DFlash2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2` | **4-node TP=4** · fp8 KV + **DFlash2** block-diffusion spec (incoai drafter, ~zero KV-pool cost) · **1M context** · 68.5 tok/s single-stream (C6 aggregate 100.1) |
+| GLM-5.3-Flash (EXL3 TP=2) | `ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3` | **2-node TP=2** · **EXL3/TR3 4bpw weights** (brandonmusic, KLD≈official FP8) × fp8 KV + **DFlash2** k=7 · **900K context** · Vision on by default · 62.9 tok/s single-stream (×4 aggregate 146.5) |
 
 > **Fixed topology**: every recipe declares an exact node count (e.g., 2 nodes · TP=2 or
 > 4 nodes · TP=4); Fireworks publish must match it exactly, as parameters are tuned for the

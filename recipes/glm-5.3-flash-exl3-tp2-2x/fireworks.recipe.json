@@ -1,0 +1,263 @@
+{
+  "name": "GLM-5.3-Flash EXL3（TP=2 · DFlash2 · 900K）",
+  "description": "GLM-5.3-Flash（320B/A18B MoE，glm5_next）双节点 TP=2 服务——EXL3/TR3 路线：brandonmusic uniform-K4 4bpw 权重（~164GiB/120 分片）+ fp8 KV（packed fp8_ds_mla）+ DFlash2 k=7 投机，900K 上下文；Vision 默认开启（image×4 / video×1）。实测 decode：单流 62.9 tok/s（×2 聚合 103.3 / ×4 聚合 146.5）。",
+  "image": "ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3",
+  "compose_template": "services:\n  vllm-glm53-exl3:\n    image: ${GLM53EXL3_IMAGE:-ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3}\n    container_name: ${TASK_NAME}-rank${NODE_RANK}\n    healthcheck:\n      test: [\"CMD\", \"python3\", \"-c\", \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:${VLLM_PORT:-8888}/health', timeout=5).status == 200 else 1)\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 900s\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"32gb\"\n    cap_add:\n      - IPC_LOCK\n    ulimits:\n      memlock: -1\n      stack: 67108864\n      nofile: 1048576\n    gpus: all\n    devices:\n      - /dev/infiniband:/dev/infiniband\n    volumes:\n      # 生产 launcher 把主模型 + DFlash2 草稿都放在 /root/.cache/huggingface（HF_HOME 指向它，按 HF repo id 离线解析）\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/root/.cache/huggingface\n      # CUDA graph / JIT 编译缓存挂持久卷，容器重建不丢\n      - ${GLM53EXL3_CACHE:-${HOME}/.cache/vllm-glm53-exl3}:/root/.cache/vllm\n    environment:\n      HF_HOME: /root/.cache/huggingface\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      TRANSFORMERS_OFFLINE: \"1\"\n      VLLM_CACHE_ROOT: /root/.cache/vllm\n      VLLM_ENGINE_READY_TIMEOUT_S: \"3600\"\n      VLLM_NO_USAGE_STATS: \"1\"  # py-cpuinfo/aarch64 usage 线程 JSONDecodeError；源 launcher 关统计\n      DO_NOT_TRACK: \"1\"\n      # SM121 架构 + fp8_ds_mla KV 所需（源 launcher 全部保留）\n      TORCH_CUDA_ARCH_LIST: \"12.1a\"\n      FLASHINFER_CUDA_ARCH_LIST: \"12.1a\"\n      FLASHINFER_DISABLE_VERSION_CHECK: \"1\"\n      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True\n      VLLM_HOST_IP: \"${VLLM_HOST_IP:-}\"\n      # 网络：RoCE（CX7 直连），HCA 由 hca 自动键逗号分隔填充；GID 每启动动态解析\n      NCCL_NET: \"${NCCL_NET:-IB}\"\n      NCCL_NET_PLUGIN: none\n      NCCL_IB_DISABLE: \"0\"\n      NCCL_IB_HCA: \"${NCCL_IB_HCA:-}\"\n      NCCL_IB_GID_INDEX: \"${NCCL_IB_GID_INDEX:-}\"\n      NCCL_IB_GID_AUTO: \"1\"\n      NCCL_IB_ADDR_FAMILY: AF_INET\n      NCCL_IB_ROCE_VERSION_NUM: 2\n      NCCL_SOCKET_IFNAME: \"${NCCL_SOCKET_IFNAME:-}\"\n      GLOO_SOCKET_IFNAME: \"${GLOO_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      NCCL_NVLS_ENABLE: \"0\"\n      NCCL_CROSS_NIC: \"0\"\n      NCCL_IB_MERGE_NICS: \"0\"\n      NCCL_CUMEM_ENABLE: \"0\"\n      NCCL_IGNORE_CPU_AFFINITY: \"1\"\n      NCCL_DEBUG: WARN\n      TORCH_NCCL_ASYNC_ERROR_HANDLING: \"1\"\n    command:\n      - bash\n      - -lc\n      - >\n        set -e;\n        MM_ARGS=();\n        if [ \"${LANGUAGE_MODEL_ONLY:-0}\" = \"1\" ]; then\n          MM_ARGS+=(--language-model-only);\n        else\n          if [ -z \"${LIMIT_MM:-}\" ]; then LIMIT_MM='{\"image\":4,\"video\":1}'; fi;\n          MM_ARGS+=(--limit-mm-per-prompt \"${LIMIT_MM}\" --skip-mm-profiling);\n        fi;\n        exec /usr/local/bin/vllm serve ${GLM53EXL3_MODEL_PATH:-brandonmusic/GLM-5.3-Flash-tr3-4bpw}\n        --served-model-name ${SERVED_MODEL_NAME:-GLM-5.3-Flash-EXL3}\n        --host 0.0.0.0\n        --port ${VLLM_PORT:-8888}\n        --trust-remote-code\n        --tensor-parallel-size 2\n        --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.87}\n        --max-model-len ${MAX_MODEL_LEN:-900000}\n        --max-num-seqs ${MAX_NUM_SEQS:-4}\n        --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-1024}\n        --quantization exl3\n        --kv-cache-dtype ${KV_CACHE_DTYPE:-fp8}\n        --enable-prefix-caching\n        --enable-prompt-tokens-details\n        --no-enable-flashinfer-autotune\n        --tool-call-parser glm47\n        --enable-auto-tool-choice\n        --reasoning-parser glm45\n        --speculative-config '{\"method\":\"dflash\",\"model\":\"${GLM53EXL3_DRAFT_PATH:-incoai/GLM-5.3-Flash-DFlash2}\",\"num_speculative_tokens\":${GLM53EXL3_DFLASH_TOKENS:-7},\"kv_cache_dtype\":\"auto\",\"draft_sample_method\":\"probabilistic\",\"rejection_sample_method\":\"standard\",\"draft_tensor_parallel_size\":${GLM53EXL3_DFLASH_DRAFT_TP:-1}}'\n        --cudagraph-capture-sizes 1 2 4 8 16 24 32\n        --chat-template ${CHAT_TEMPLATE:-/opt/glm53/chat_template.jinja}\n        \"${MM_ARGS[@]}\"\n        --distributed-executor-backend mp\n        --nnodes ${NODES_TOTAL:-2}\n        --node-rank ${NODE_RANK}\n        --master-addr ${MASTER_ADDR}\n        --master-port ${MASTER_PORT:-29521}\n        ${HEADLESS:+--headless}\n",
+  "variables": [
+    {
+      "key": "GLM53EXL3_IMAGE",
+      "label": "vLLM 镜像",
+      "label_en": "vLLM image",
+      "type": "string",
+      "source": "user",
+      "default": "ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3",
+      "picker": "image",
+      "help": "GHCR 公开 EXL3 overlay 镜像（FROM vllm-openai glm53-flash-arm64-cu130）：NoPE-MLA SM121 sparse 补丁 + exllamav3_ext（sm_121a）+ DFlash2/EAGLE3/video 补丁 + MM chat 模板全部烘焙",
+      "help_en": "Public GHCR EXL3 overlay image (FROM vllm-openai glm53-flash-arm64-cu130): NoPE-MLA SM121 sparse patches + exllamav3_ext (sm_121a) + DFlash2/EAGLE3/video patches + MM chat template baked in"
+    },
+    {
+      "key": "GLM53EXL3_MODEL_PATH",
+      "label": "模型",
+      "label_en": "Model",
+      "type": "string",
+      "source": "user",
+      "default": "brandonmusic/GLM-5.3-Flash-tr3-4bpw",
+      "picker": "model",
+      "required": true,
+      "help": "EXL3/TR3 uniform-K4 4bpw 量化主模型（120 分片 ~164GiB，snapshot 5ab363a8…）；exl3 路线不走 marlin/NVFP4，勿换 NVFP4 权重",
+      "help_en": "EXL3/TR3 uniform-K4 4bpw quant main model (120 shards ~164 GiB, snapshot 5ab363a8…); this is the EXL3 lane — do not swap in NVFP4 weights / marlin"
+    },
+    {
+      "key": "GLM53EXL3_DRAFT_PATH",
+      "label": "DFlash2 Drafter 模型",
+      "label_en": "DFlash2 drafter model",
+      "type": "string",
+      "source": "user",
+      "default": "incoai/GLM-5.3-Flash-DFlash2",
+      "picker": "model",
+      "required": true,
+      "help": "DFlash2 块扩散草稿模型（~2.3GiB BF16，CC BY-NC-ND 4.0 研究/评测）；与主模型一样分发给节点 HF 缓存，按 repo id 离线解析",
+      "help_en": "DFlash2 block-diffusion draft model (~2.3 GiB BF16, CC BY-NC-ND 4.0 research/eval); distributed to the node HF cache like the main model and resolved offline by repo id"
+    },
+    {
+      "key": "SERVED_MODEL_NAME",
+      "label": "对外服务名",
+      "label_en": "Served model name",
+      "type": "string",
+      "source": "user",
+      "default": "GLM-5.3-Flash-EXL3"
+    },
+    {
+      "key": "VLLM_PORT",
+      "label": "vLLM API 端口",
+      "label_en": "vLLM API port",
+      "type": "int",
+      "source": "user",
+      "default": "8888"
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "label": "最大上下文长度",
+      "label_en": "Max context length",
+      "type": "int",
+      "source": "user",
+      "default": "900000",
+      "help": "上游 launcher 生产档：900,000；util 0.87 下 KV 池 982,612 token（~15.67GiB fp8 MLA，1.09× 满 900k 请求）——原生 1M 仍分配不出来",
+      "help_en": "Upstream launcher production value: 900,000; KV pool 982,612 tokens (~15.67 GiB fp8 MLA, 1.09× a full 900k request) at util 0.87 — native 1M still does not allocate"
+    },
+    {
+      "key": "MAX_NUM_SEQS",
+      "label": "最大并发序列数",
+      "label_en": "Max concurrent sequences",
+      "type": "int",
+      "source": "user",
+      "default": "4",
+      "help": "上游生产 4（decode 批）；MTP/投机每序列额外加 k+1 token",
+      "help_en": "Upstream production 4 (decode batch); speculation adds k+1 tokens per sequence"
+    },
+    {
+      "key": "MAX_NUM_BATCHED_TOKENS",
+      "label": "单批最大 token 数",
+      "label_en": "Max batched tokens",
+      "type": "int",
+      "source": "user",
+      "default": "1024",
+      "help": "上游 pin：1024 —— 8192 会在长上下文 prefill 时把 GB10 indexer top-k 的 smem 撑爆",
+      "help_en": "Upstream pin: 1024 — 8192 oversubscribes the GB10 indexer top-k smem on long-context prefill"
+    },
+    {
+      "key": "GPU_MEMORY_UTILIZATION",
+      "label": "GPU 显存利用率",
+      "label_en": "GPU memory utilization",
+      "type": "float",
+      "source": "user",
+      "default": "0.87",
+      "help": "上游生产 0.87（DFlash2 + vision；982,612-token 池）；改动请先跑真实长 prefill 把关",
+      "help_en": "Upstream production 0.87 (DFlash2 + vision; 982,612-token pool); gate changes behind a real long prefill"
+    },
+    {
+      "key": "KV_CACHE_DTYPE",
+      "label": "KV 缓存类型",
+      "label_en": "KV cache dtype",
+      "type": "select",
+      "source": "user",
+      "default": "fp8",
+      "options": ["fp8", "fp8_e4m3", "fp8_e5m2", "bf16"],
+      "help": "上游要求 fp8（packed fp8_ds_mla，唯一的 sparse-MLA 后端）；bf16 无 sparse 核、nvfp4 只支持 dense MHA——都别用",
+      "help_en": "Upstream requires fp8 (packed fp8_ds_mla, the only sparse-MLA backend); bf16 has no sparse kernel and nvfp4 is dense-MHA-only — do not use either"
+    },
+    {
+      "key": "GLM53EXL3_DFLASH_TOKENS",
+      "label": "DFlash2 投机 token 数",
+      "label_en": "DFlash2 speculative tokens",
+      "type": "int",
+      "source": "user",
+      "default": "7",
+      "help": "必须是 7（trained block 8）：上游 k=7 档位",
+      "help_en": "Must be 7 (trained block 8): the upstream k=7 tier"
+    },
+    {
+      "key": "GLM53EXL3_DFLASH_DRAFT_TP",
+      "label": "Drafter TP（1 = rank0 独占）",
+      "label_en": "Drafter TP (1 = rank 0 only)",
+      "type": "int",
+      "source": "user",
+      "default": "1",
+      "help": "1（默认）= 2.3GiB 草稿模型只留在 rank 0，每步投机不过 CX7；留空 = 继承目标 TP",
+      "help_en": "1 (default) = keep the 2.3 GiB drafter on rank 0 (no CX7 per draft step); empty = inherit the target TP"
+    },
+    {
+      "key": "LANGUAGE_MODEL_ONLY",
+      "label": "仅文本（不加载视觉塔）",
+      "label_en": "Language-only (no vision tower)",
+      "type": "string",
+      "source": "user",
+      "default": "0",
+      "help": "0（默认）= 加载视觉塔（image×4 / video×1）；1 = --language-model-only，纯文本更快",
+      "help_en": "0 (default) = load the vision tower (image×4 / video×1); 1 = --language-model-only (text-only, faster)"
+    },
+    {
+      "key": "SKIP_MM_PROFILING",
+      "label": "跳过 MM dummy profile",
+      "label_en": "Skip MM dummy profile",
+      "type": "string",
+      "source": "user",
+      "default": "1",
+      "help": "保持 1：最大规格的 image+video dummy profile 会 OOM 本 UMA",
+      "help_en": "Keep 1: a max-size image+video dummy profile OOMs this UMA"
+    },
+    {
+      "key": "LIMIT_MM",
+      "label": "每请求多模态上限",
+      "label_en": "Per-request MM limit",
+      "type": "string",
+      "source": "user",
+      "default": "{\"image\":4,\"video\":1}",
+      "help": "--limit-mm-per-prompt 的 JSON（默认 {\"image\":4,\"video\":1}；清空则回退该默认）",
+      "help_en": "JSON for --limit-mm-per-prompt (default {\"image\":4,\"video\":1}; clearing it falls back to the default)"
+    },
+    {
+      "key": "CHAT_TEMPLATE",
+      "label": "Chat 模板路径",
+      "label_en": "Chat template path",
+      "type": "string",
+      "source": "user",
+      "default": "/opt/glm53/chat_template.jinja",
+      "help": "镜像内 MM 模板（<|image|>/<|video|>，源仓库 files/chat_template.jinja 烘焙）；checkpoint 自带的是 language-only 版",
+      "help_en": "In-image MM template (<|image|>/<|video|>, baked from files/chat_template.jinja); the checkpoint's built-in one is language-only"
+    },
+    {
+      "key": "MASTER_PORT",
+      "label": "分布式主端口",
+      "label_en": "Distributed master port",
+      "type": "int",
+      "source": "user",
+      "default": "29521"
+    },
+    {
+      "key": "MASTER_ADDR",
+      "label": "Head 节点地址",
+      "label_en": "Head address",
+      "type": "string",
+      "source": "cluster",
+      "auto": "head_roce_ip",
+      "required": true,
+      "help": "自动填充 head 节点的 RoCE IP（多节点协调地址，随任务的 head 变化）",
+      "help_en": "Filled with the head node's RoCE IP (multi-node coordination address, follows per-task head)"
+    },
+    {
+      "key": "NODES_TOTAL",
+      "label": "节点总数",
+      "label_en": "Node count",
+      "type": "int",
+      "source": "cluster",
+      "auto": "nodes_total",
+      "required": true,
+      "help": "由任务节点数自动填充（本配方为固定 2 节点拓扑，发布时校验恰好匹配）",
+      "help_en": "Auto-filled from task node count (fixed 2-node topology; publish validates exact match)"
+    },
+    {
+      "key": "NODE_RANK",
+      "label": "节点序号",
+      "label_en": "Node rank",
+      "type": "int",
+      "source": "node",
+      "auto": "node_rank",
+      "required": true
+    },
+    {
+      "key": "HEADLESS",
+      "label": "Headless（worker 不跑 API server）",
+      "label_en": "Headless (worker: no API server)",
+      "type": "string",
+      "source": "node",
+      "auto": "headless",
+      "help": "自动按角色填充：head 为空、worker 为 1（mp 多节点协调必需）",
+      "help_en": "Auto-filled per role: empty on head, 1 on workers (required for mp multi-node coordination)"
+    },
+    {
+      "key": "VLLM_HOST_IP",
+      "label": "本节点 vLLM 绑定 IP",
+      "label_en": "Local vLLM bind IP",
+      "type": "string",
+      "source": "node",
+      "auto": "node_roce_ip",
+      "help": "必须为各节点 RoCE IP，避免分布式绑定错误地址",
+      "help_en": "Must be each node's RoCE IP to avoid binding the wrong address"
+    },
+    {
+      "key": "NCCL_IB_HCA",
+      "label": "RoCE HCA",
+      "label_en": "RoCE HCA",
+      "type": "string",
+      "source": "node",
+      "auto": "hca",
+      "help": "hca 自动键按节点返回逗号分隔多 rail（源单 rail：rocep1s0f1 / rocep1s0f0）",
+      "help_en": "The hca auto key returns comma-separated rails per node (upstream single-rail: rocep1s0f1 / rocep1s0f0)"
+    },
+    {
+      "key": "NCCL_SOCKET_IFNAME",
+      "label": "NCCL 网络接口",
+      "label_en": "NCCL network interface",
+      "type": "string",
+      "source": "node",
+      "auto": "netdev",
+      "help": "auto 返回首选 RoCE 口（源：enp1s0f1np1 ↔ enp1s0f0np0）；多 rail 场景可手工覆盖",
+      "help_en": "auto returns the preferred RoCE interface (upstream: enp1s0f1np1 ↔ enp1s0f0np0); override for multi-rail"
+    },
+    {
+      "key": "NCCL_IB_GID_INDEX",
+      "label": "RoCE GID index",
+      "label_en": "RoCE GID index",
+      "type": "int",
+      "source": "node",
+      "auto": "gid_index",
+      "help": "每节点/HCA 不同且重启漂移，自动解析（源 launcher 硬编码 3）",
+      "help_en": "Per-node/per-HCA and drifts across reboots; auto-resolved (upstream hard-codes 3)"
+    }
+  ],
+  "version": "1.0.0",
+  "nodes": 2,
+  "name_en": "GLM-5.3-Flash EXL3 (TP=2 · DFlash2 · 900K)",
+  "description_en": "2-node TP=2 serving for GLM-5.3-Flash (320B/A18B MoE, glm5_next) on the EXL3/TR3 lane: brandonmusic uniform-K4 4bpw weights (~164 GiB / 120 shards) + fp8 KV (packed fp8_ds_mla) + DFlash2 k=7 speculation, 900K context; Vision on by default (image×4 / video×1). Measured decode: 62.9 tok/s single-stream (2-way aggregate 103.3 / 4-way aggregate 146.5)."
+}
