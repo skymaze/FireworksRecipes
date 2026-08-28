@@ -3,7 +3,8 @@
 Serve **GLM-5.3-Flash** ([zai-org/GLM-5.3-Flash](https://huggingface.co/zai-org/GLM-5.3-Flash),
 320B / A18B MoE, `glm5_next`) at **TP=4** on **4** DGX Spark with **Lane A (fp8 KV) +
 DFlash2 block-diffusion speculative decoding** — the first working DFlash2 deployment on GB10:
-single-stream **46.9 tok/s (2.15× over MTP-4)**.
+**68.5 tok/s single-stream at TP4 (0.641 acceptance)**; ladder = MTP TP2 21.8 → MTP TP4 35.7
+→ DFlash2 TP2 46.9 → **DFlash2 TP4 68.5**.
 
 - Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2`
   = upstream sm121-v8 build chain (day-0 + 8-layer patch, i.e. the Lane A image) + the
@@ -23,16 +24,22 @@ single-stream **46.9 tok/s (2.15× over MTP-4)**.
     `target_layer_ids [5,14,24,33,42]`; sensitive main-model drops in unchanged)
 - Speculation: `--speculative-config '{"method":"dflash","model":"<drafter>","num_speculative_tokens":7}'`
   (**must be 7 = block_size−1**)
-- KV / shapes: **fp8_e4m3**, 24 GiB per rank, `--block-size 2304`, gmu 0.85,
+- KV / shapes: **fp8_e4m3**, **16 GiB per rank** (the upstream TP4 DFlash2 measured pin),
+  `--block-size 2304`, gmu 0.85,
   **1,048,576 context**, `--max-num-seqs 6`, port `8000`
-- Measured (upstream 2026-08-28, TP2/262K, warm): **46.9 tok/s single-stream · 74.1% draft
-  acceptance**; C1–C6 concurrency sweep with zero failures (C5 aggregate peak 56.2 tok/s);
-  upstream states "the same overlay applies to this TP4 recipe"
+- Measured (upstream 2026-08-28):
+  - **TP4/1M, warm, code prompt: single-stream 68.5 tok/s · 0.641 acceptance · KV pool
+    2,622,494 tokens (2.5× a full 1M request)** · 28.8K deep-decode passed · vision on
+    (abliterated weights)
+  - TP4 C1–C6 concurrency sweep (42 requests, zero failures): aggregate 55.2 / 52.3 / 59.7 /
+    84.4 / 85.2 / **100.1** tok/s (TP4 compute absorbs the draft verification, so aggregate
+    keeps climbing through C6 — unlike TP2, which peaks at C5)
+  - TP2/262K (sibling repo): single-stream 46.9 tok/s · 74.1% acceptance; C5 aggregate peak
+    56.2 tok/s
 
-> vs Lane A (MTP-4): DFlash2 is ~2.15× single-stream on identical hardware/context with
-> ~zero KV-pool cost. TP4 MTP single-stream measured ~55 tok/s; TP4 DFlash2 numbers are not
-> separately published upstream — this recipe follows "the same overlay applies to TP4" and
-> suggests backfilling numbers after a real-machine run.
+> vs Lane A (MTP-4): DFlash2 single-stream is ~1.9× (TP4: 35.7 → 68.5 tok/s) with ~zero
+> KV-pool cost. The upstream TP4 DFlash2 sweep used a **16 GiB/rank KV pin** (2,622,494-token
+> pool); this recipe's default matches it — gate any bigger pool behind a real long prefill.
 
 ## Quick start (before publishing)
 
@@ -55,7 +62,7 @@ single-stream **46.9 tok/s (2.15× over MTP-4)**.
 | `MAX_MODEL_LEN` | `1048576` | Model-native 1M; lower (e.g. 300000) for snappier multi-user, keep 64-aligned |
 | `MAX_NUM_SEQS` | `6` | Same as Lane A |
 | `GPU_MEMORY_UTILIZATION` | `0.85` | Pairs with the pinned `KV_CACHE_MEMORY` |
-| `KV_CACHE_MEMORY` | `25769803776` | Per-rank fp8 KV budget (24 GiB); the drafter costs ~0 KV, no cut here |
+| `KV_CACHE_MEMORY` | `17179869184` | Per-rank fp8 KV budget (16 GiB = 2,622,494-token pool, the upstream TP4 DFlash2 measured pin); the drafter costs ~0 KV, no cut here |
 | `DFLASH2_NUM_SPECULATIVE_TOKENS` | `7` | **Must = block_size−1** |
 | `CHAT_TEMPLATE` | (empty) | In-container template path; set to the mm template to enable Vision |
 | `MASTER_PORT` | `29521` | Distributed master port |
@@ -88,8 +95,9 @@ fail publish with `invalid project name ...` (502). Use a dot-free name like
   prefills on GB10 — gate every bump behind a real long prefill).
 - Boot discipline (hard-won rules): tear down all ranks before relaunching any; verify `IMAGE`
   matches on every node; capture `docker logs` before `rm -f`.
-- At TP2 upstream tightened KV to 3 GiB for headroom; **do not copy that at TP4** (~50 GiB
-  weights/rank + 24 GiB KV was validated; the drafter adds only 2.34 GB/rank).
+- At TP2 upstream tightened KV to 3 GiB for headroom; **do not copy that at TP4** — this recipe's
+  16 GiB default is the upstream TP4 DFlash2 measured pin (2,622,494-token pool); the drafter adds
+  only 2.34 GB/rank.
 
 ## References
 
