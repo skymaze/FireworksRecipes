@@ -6,9 +6,9 @@ RoCEv2) — the first **fp8 KV cache for a NoPE-MLA model on consumer Blackwell*
 is the upstream deployment's **Lane A — fp8 KV** (FlashInfer SM12x unlock, the
 speed-oriented lane):
 
-- Image: `radixark/vllm-glm53-flash:sm121-v8` = vLLM day-0 `glm53-flash-arm64-cu130` + an
-  8-layer patch stack (SM121 NoPE sparse-MLA FA2, FlashInfer 0.6.18 nightly, NCCL 2.30.7,
-  cutlass-dsl 4.6.2, PDL off, indexer top-k init, fp8 KV smem tile)
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` = vLLM day-0
+  `glm53-flash-arm64-cu130` + the **8-layer patch stack** baked from the upstream chain
+  (pushed to ACR with this recipe):
 - Model: `LibertAIDAI/GLM-5.3-Flash-NVFP4` (NVFP4 weight quant, 120 shards ~182 GiB, censored);
   uncensored drop-in: `drowzeys/keys-GLM-5.3-Flash-NVFP4-ablit-l15-45-anchorstock`
 - Parallelism: **TP=4** (`--tensor-parallel-size 4`), `mp` backend, one GPU per node
@@ -27,7 +27,10 @@ speed-oriented lane):
 ## Quick start (before publishing)
 
 - Cluster: exactly **4** nodes (head + 3 workers), dual-rail RoCEv2 tested.
-- Image: `radixark/vllm-glm53-flash:sm121-v8` (Docker Hub; Fireworks pulls and distributes).
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` (Aliyun ACR;
+  Fireworks pulls and distributes). The upstream author's `radixark/vllm-glm53-flash:sm121-v8`
+  is only a local build-chain tag and was never pushed publicly, so this recipe bakes the image
+  from the upstream chain and pushes it to ACR.
 - Model: `LibertAIDAI/GLM-5.3-Flash-NVFP4` (HF hub layout
   `models--LibertAIDAI--GLM-5.3-Flash-NVFP4`, 120 shards ~182 GiB) distributed to the node
   cache; in-container `HF_HUB_OFFLINE=1` resolves by repo id (`HF_HOME=/cache/huggingface`).
@@ -39,7 +42,7 @@ speed-oriented lane):
 
 | Variable | Default | Notes |
 |---|---|---|
-| `GLM53_IMAGE` | `radixark/vllm-glm53-flash:sm121-v8` | Platform image (8-layer patch stack baked in) |
+| `GLM53_IMAGE` | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | Platform image (upstream 8-layer patch stack baked in) |
 | `GLM53_MODEL_PATH` | `LibertAIDAI/GLM-5.3-Flash-NVFP4` | Model (offline HF-hub resolution; or absolute snapshot path) |
 | `SERVED_MODEL_NAME` | `glm-5.3-flash` | Served name (drop-in name) |
 | `VLLM_PORT` | `8000` | API port |

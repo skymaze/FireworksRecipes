@@ -5,9 +5,8 @@
 `glm5_next` 架构）的 **NVIDIA consumer Blackwell 首款 NoPE-MLA fp8 KV** 的 **TP=4** 服务；
 本配方对应上游部署的 **Lane A — fp8 KV**（FlashInfer SM12x unlock，就速度优化的一路）：
 
-- 镜像：`radixark/vllm-glm53-flash:sm121-v8` = vLLM day-0 `glm53-flash-arm64-cu130` +
-  8 层 patch 栈（SM121 NoPE 稀疏-MLA FA2、FlashInfer 0.6.18 nightly、NCCL 2.30.7、
-  cutlass-dsl 4.6.2、PDL 关闭、indexer top-k 初始化、fp8 KV smem tile）
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` = vLLM day-0
+  `glm53-flash-arm64-cu130` + 按上游 chain 烘焙的 **8 层 patch 栈**（本配方已推送 ACR）：
 - 模型：`LibertAIDAI/GLM-5.3-Flash-NVFP4`（NVFP4 权重量化，120 分片 ~182 GiB，censored）；
   uncensored drop-in：`drowzeys/keys-GLM-5.3-Flash-NVFP4-ablit-l15-45-anchorstock`
 - 并行：**TP=4**（`--tensor-parallel-size 4`）、`mp` 后端、4 台每机 1 GPU
@@ -24,7 +23,9 @@
 ## 快速开始（发布前就绪）
 
 - 集群：**4 台**节点（head + 3 worker），双 rail RoCEv2 已配置测试。
-- 镜像：`radixark/vllm-glm53-flash:sm121-v8`（Docker Hub；Fireworks 拉取后分发到节点）。
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8`（阿里云 ACR；
+  Fireworks 拉取后分发到节点）。上游作者的 `radixark/vllm-glm53-flash:sm121-v8` 仅为本地
+  构建链 tag、未公开推送，故本配方镜像按上游 chain 自行烘焙后推送 ACR。
 - 模型：`LibertAIDAI/GLM-5.3-Flash-NVFP4`（HF hub 布局 `models--LibertAIDAI--GLM-5.3-Flash-NVFP4`，
   120 分片 ~182 GiB）分发到节点缓存；容器内 `HF_HUB_OFFLINE=1` 按 repo id 离线解析
   （`HF_HOME=/cache/huggingface`）。
@@ -36,7 +37,7 @@
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `GLM53_IMAGE` | `radixark/vllm-glm53-flash:sm121-v8` | 平台镜像（8 层 patch 栈已烘焙） |
+| `GLM53_IMAGE` | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | 平台镜像（上游 8 层 patch 栈已烘焙） |
 | `GLM53_MODEL_PATH` | `LibertAIDAI/GLM-5.3-Flash-NVFP4` | 模型（HF hub 离线解析；或填缓存内 snapshot 绝对路径） |
 | `SERVED_MODEL_NAME` | `glm-5.3-flash` | 对外服务名（drop-in 名） |
 | `VLLM_PORT` | `8000` | API 端口 |

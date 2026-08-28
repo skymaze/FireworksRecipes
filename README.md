@@ -18,7 +18,7 @@
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **单节点** SGLang 服务 · flashinfer + DSPARK 投机（mamba 草稿）· **FP8 KV** · `--mamba-full-memory-ratio 11.01`（疑似笔误，待验证） |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
-| GLM-5.3-Flash (Lane A) | `radixark/vllm-glm53-flash:sm121-v8` | **四节点 TP=4** · **fp8 KV**（FlashInfer SM12x unlock）· MTP k=4 · **1M 上下文** · ~55 tok/s 结构化解码 · NVFP4 量化（可换 uncensored drop-in） |
+| GLM-5.3-Flash (Lane A) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | **四节点 TP=4** · **fp8 KV**（FlashInfer SM12x unlock）· MTP k=4 · **1M 上下文** · ~55 tok/s 结构化解码 · NVFP4 量化（可换 uncensored drop-in） |
 
 > **拓扑固定**：每条配方声明**确切的节点数**（如 2 节点 · TP=2 或 4 节点 · TP=4）；
 > Fireworks 发布时必须恰好匹配，模型参数按该拓扑调优。不同拓扑请选用对应配方。
