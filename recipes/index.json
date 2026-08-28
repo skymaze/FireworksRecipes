@@ -201,6 +201,35 @@
       "description_en": "4-node TP=4 serving for GLM-5.3-Flash (320B/A18B MoE) NVFP4 — Lane A fp8 KV + DFlash2 block-diffusion spec decode: ACR-baked v8-dflash2 image, fp8_e4m3 KV (16 GiB/rank), DFlash2 drafter, 1M context, 68.5 tok/s single-stream (C6 aggregate 100.1 tok/s).",
       "name": "GLM-5.3-Flash NVFP4 DFlash2",
       "name_en": "GLM-5.3-Flash NVFP4 DFlash2"
+    },
+{
+      "id": "glm-5.3-flash-nvfp4-tp2-dflash2-2x",
+      "provider": "zai-org",
+      "model": "zai-org/GLM-5.3-Flash",
+      "path": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/fireworks.recipe.json",
+      "readme": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/README.md",
+      "readme_en": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/README.en.md",
+      "version": "1.0.0",
+      "params": "320B/18B NVFP4",
+      "context_length": 262144,
+      "modality": "text",
+      "nodes": 2,
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2",
+      "tags": [
+        "gb10",
+        "glm-5.3",
+        "flash",
+        "nvfp4",
+        "fp8-kv",
+        "tp2",
+        "dflash2",
+        "speculative",
+        "262k-context"
+      ],
+      "description": "GLM-5.3-Flash（320B/A18B MoE）NVFP4 双节点 TP=2 服务（fp8 KV + DFlash2 块扩散投机解码）：上游「the one to copy」档位、C1–C6 并发零失败、262,144 上下文、3GiB KV pin、warm 单流 46.9 tok/s。",
+      "description_en": "2-node TP=2 serving for GLM-5.3-Flash (320B/A18B MoE) NVFP4 — fp8 KV + DFlash2 block-diffusion spec decode: the upstream “the one to copy” tier, C1-C6 zero failures, 262,144 context, 3 GiB KV pin, 46.9 tok/s single-stream warm.",
+      "name": "GLM-5.3-Flash NVFP4 DFlash2 TP=2",
+      "name_en": "GLM-5.3-Flash NVFP4 DFlash2 TP=2"
     }
   ]
 }
