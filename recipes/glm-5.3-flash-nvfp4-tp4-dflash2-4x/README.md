@@ -70,7 +70,10 @@ Docker Compose v5 硬性限制）。`glm5.3-flash-nv` 这类带点任务名会�
 
 ## 部署注意（源自源仓库实机踩坑）
 
-- **`num_speculative_tokens` 必须 = block_size−1 = 7**：drafter 按 8 的 block 训练，末位是
+- **缓存命中可见**：已开 `--enable-prefix-caching`（hybrid 模型默认开启）与
+  `--enable-prompt-tokens-details`；API 返回 `usage.prompt_tokens_details.cached_tokens`
+  可核对前缀缓存命中 token 数（深会话/agentic 场景命中率 ~100×，同前缀二次请求比对）。
+**`num_speculative_tokens` 必须 = block_size−1 = 7**：drafter 按 8 的 block 训练，末位是
   目标模型已验证 token；填 8 会草稿一个模型从未学过的位置。
 - **drafter 只做文本草稿**：vision 请求仍可用，只是不投机（日志会提示
   "does not support external multimodal embeddings"）。

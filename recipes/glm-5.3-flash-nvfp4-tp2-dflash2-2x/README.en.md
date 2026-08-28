@@ -55,7 +55,11 @@ and `_`, no dots** (node Docker Compose v5 hard limit). Use dot-free names like
 
 ## Deployment notes (upstream field experience)
 
-- **TP2 carries ~97 GiB weights/rank; GB10 free-memory headroom is the hard constraint**:
+- **Cache-hit visibility**: `--enable-prefix-caching` (on by default for hybrid models) +
+  `--enable-prompt-tokens-details`; the API reports `usage.prompt_tokens_details.cached_tokens`
+  so you can verify prefix-cache hits (deep-session/agentic ~100×; compare a second request
+  with the same prefix).
+**TP2 carries ~97 GiB weights/rank; GB10 free-memory headroom is the hard constraint**:
   do not raise `KV_CACHE_MEMORY` (upstream ladder: any KV > 4.14 GiB NVRM-OOMs on some boot;
   3 GiB is the concurrency-validated shipping pin). During boot, upstream relies on the
   `cache_flusher` sidecar against page-cache-full allocations — Fireworks does not run it, so

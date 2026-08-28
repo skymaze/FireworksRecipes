@@ -66,7 +66,10 @@ lowercase alphanumeric characters, hyphens, and underscores`，控制面表现�
 
 ## 部署注意（源自源仓库实机踩坑）
 
-- **不要改**：`--block-size 2304`（DeepGEMM arch-12 要求 kpool 页 64 对齐；2176 会崩）、
+- **缓存命中可见**：已开 `--enable-prefix-caching`（hybrid 模型默认开启）与
+  `--enable-prompt-tokens-details`；API 返回 `usage.prompt_tokens_details.cached_tokens`
+  可核对前缀缓存命中 token 数（深会话/agentic 场景命中率 ~100×，同前缀二次请求比对）。
+**不要改**：`--block-size 2304`（DeepGEMM arch-12 要求 kpool 页 64 对齐；2176 会崩）、
   `--moe-backend marlin`、`--kv-cache-dtype fp8_e4m3`、`--enforce-eager`（b12x/fp8 路径要求，
   同时把单流顶到结构化解码的上限）、`--kv-cache-memory` 默认（GB10 上更大池并发 prefill 会
   NVRM OOM——每次加大必须用真实长 prefill 把关，勿盲升）。

@@ -79,7 +79,11 @@ fail publish with `invalid project name ...` (502). Use a dot-free name like
 
 ## Deployment notes (upstream field experience)
 
-- **`num_speculative_tokens` must be block_size−1 = 7**: the drafter is trained for a block of
+- **Cache-hit visibility**: `--enable-prefix-caching` (on by default for hybrid models) +
+  `--enable-prompt-tokens-details`; the API reports `usage.prompt_tokens_details.cached_tokens`
+  so you can verify prefix-cache hits (deep-session/agentic ~100×; compare a second request
+  with the same prefix).
+**`num_speculative_tokens` must be block_size−1 = 7**: the drafter is trained for a block of
   8 and the last position is the target's own verified token; 8 drafts a position the model
   never learned.
 - The drafter drafts **text only**: vision requests still work but are not speculated (log

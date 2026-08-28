@@ -72,7 +72,11 @@ do **not** use `glm5.3-*`.
 
 ## Deployment notes (from upstream field experience)
 
-- Do **not** change: `--block-size 2304` (DeepGEMM arch-12 kpool page rule; 2176 dies),
+- **Cache-hit visibility**: `--enable-prefix-caching` (on by default for hybrid models) +
+  `--enable-prompt-tokens-details`; the API reports `usage.prompt_tokens_details.cached_tokens`
+  so you can verify prefix-cache hits (deep-session/agentic ~100×; compare a second request
+  with the same prefix).
+Do **not** change: `--block-size 2304` (DeepGEMM arch-12 kpool page rule; 2176 dies),
   `--moe-backend marlin`, `--kv-cache-dtype fp8_e4m3`, `--enforce-eager` (required by the
   b12x/fp8 path; it also caps single-stream decode), and the default `--kv-cache-memory`
   (bigger slabs NVRM-OOM under concurrent prefills on GB10 — gate every bump behind a real

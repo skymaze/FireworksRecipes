@@ -53,7 +53,10 @@
 
 ## 部署注意（源自源仓库实机踩坑）
 
-- **TP2 每 rank 约 97 GiB 权重，GB10 内存余量是硬约束**：不要调大 `KV_CACHE_MEMORY`
+- **缓存命中可见**：已开 `--enable-prefix-caching`（hybrid 模型默认开启）与
+  `--enable-prompt-tokens-details`；API 返回 `usage.prompt_tokens_details.cached_tokens`
+  可核对前缀缓存命中 token 数（深会话/agentic 场景命中率 ~100×，同前缀二次请求比对）。
+**TP2 每 rank 约 97 GiB 权重，GB10 内存余量是硬约束**：不要调大 `KV_CACHE_MEMORY`
   （上游 ladder：任何 >4.14 GiB 的 KV 都在某些 boot 上 NVRM OOM；3 GiB 是并发验证过的
   shipping pin）。启动期权重大量吃 page cache 时，上游需要 `cache_flusher` sidecar
   顶着——Fireworks 侧未跑该 sidecar，故更应保持保守 pin。
