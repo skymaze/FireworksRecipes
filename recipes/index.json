@@ -202,7 +202,7 @@
       "name": "GLM-5.3-Flash NVFP4 DFlash2",
       "name_en": "GLM-5.3-Flash NVFP4 DFlash2"
     },
-{
+    {
       "id": "glm-5.3-flash-nvfp4-tp2-dflash2-2x",
       "provider": "zai-org",
       "model": "zai-org/GLM-5.3-Flash",
@@ -234,13 +234,13 @@
     {
       "id": "glm-5.3-flash-exl3-tp2-2x",
       "provider": "zai-org",
-      "model": "brandonmusic/GLM-5.3-Flash-tr3-4bpw",
+      "model": "Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw",
       "path": "recipes/glm-5.3-flash-exl3-tp2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-exl3-tp2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-exl3-tp2-2x/README.en.md",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "params": "320B/18B EXL3 4bpw",
-      "context_length": 900000,
+      "context_length": 1048576,
       "modality": "image-text-to-text",
       "nodes": 2,
       "image": "ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3",
@@ -254,12 +254,12 @@
         "dflash2",
         "speculative",
         "tp2",
-        "900k-context",
+        "1m-context",
         "multimodal",
         "miaai-lab"
       ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：brandonmusic uniform-K4 4bpw 权重、fp8_ds_mla KV、DFlash2 k=7 投机、900K 上下文、Vision 默认开启——decode 单流 62.9 tok/s（×4 聚合 146.5）。",
-      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): brandonmusic uniform-K4 4bpw weights, fp8_ds_mla KV, DFlash2 k=7 speculation, 900K context, Vision on by default — 62.9 tok/s single-stream (×4 aggregate 146.5).",
+      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机、1M 上下文（padded slot-share）、Vision 默认开启——decode 单流 62.9 tok/s（×4 聚合 146.5）。",
+      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation, 1M context (padded slot-share), Vision on by default — 62.9 tok/s single-stream (×4 aggregate 146.5).",
       "name": "GLM-5.3-Flash EXL3 TP=2",
       "name_en": "GLM-5.3-Flash EXL3 TP=2"
     }
