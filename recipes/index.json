@@ -170,6 +170,37 @@
       "description_en": "4-node TP=4 serving for GLM-5.3-Flash (320B/A18B MoE) NVFP4 — Lane A fp8 KV (FlashInfer SM12x unlock): ACR-baked sm121-v8 image, fp8_e4m3 KV, MTP k=4, 1M context, ~55 tok/s structured decode.",
       "name": "GLM-5.3-Flash NVFP4 Lane A",
       "name_en": "GLM-5.3-Flash NVFP4 Lane A"
+    },
+    {
+      "id": "glm-5.3-flash-nvfp4-tp4-dflash2-4x",
+      "provider": "zai-org",
+      "model": "zai-org/GLM-5.3-Flash",
+      "path": "recipes/glm-5.3-flash-nvfp4-tp4-dflash2-4x/fireworks.recipe.json",
+      "readme": "recipes/glm-5.3-flash-nvfp4-tp4-dflash2-4x/README.md",
+      "readme_en": "recipes/glm-5.3-flash-nvfp4-tp4-dflash2-4x/README.en.md",
+      "version": "1.0.0",
+      "params": "320B/18B NVFP4",
+      "context_length": 1048576,
+      "modality": "text",
+      "nodes": 4,
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2",
+      "tags": [
+        "gb10",
+        "glm-5.3",
+        "flash",
+        "nvfp4",
+        "fp8-kv",
+        "tp4",
+        "dflash2",
+        "speculative",
+        "1m-context",
+        "glm5-next",
+        "agentic"
+      ],
+      "description": "GLM-5.3-Flash（320B/A18B MoE）NVFP4 四节点 TP=4 服务（Lane A — fp8 KV + DFlash2 块扩散投机解码）：ACR 烘焙 v8-dflash2 镜像、fp8_e4m3 KV、DFlash2 drafter、1M 上下文、单流 46.9 tok/s（MTP-4 的 2.15×）。",
+      "description_en": "4-node TP=4 serving for GLM-5.3-Flash (320B/A18B MoE) NVFP4 — Lane A fp8 KV + DFlash2 block-diffusion spec decode: ACR-baked v8-dflash2 image, fp8_e4m3 KV, DFlash2 drafter, 1M context, 46.9 tok/s single-stream (2.15x over MTP-4).",
+      "name": "GLM-5.3-Flash NVFP4 DFlash2",
+      "name_en": "GLM-5.3-Flash NVFP4 DFlash2"
     }
   ]
 }

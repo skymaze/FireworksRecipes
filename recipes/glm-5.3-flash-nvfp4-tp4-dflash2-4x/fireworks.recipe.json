@@ -1,0 +1,212 @@
+{
+  "name": "GLM-5.3-Flash NVFP4（TP=4 · DFlash2）",
+  "description": "GLM-5.3-Flash（320B/A18B MoE，glm5_next）NVFP4 量化四节点 TP=4 服务（Lane A — fp8 KV + DFlash2 块扩散投机解码）：ACR 烘焙 v8-dflash2 镜像（上游 8 层 patch + 4-patch DFlash2 overlay）、fp8_e4m3 KV、DFlash2 drafter（incoai/GLM-5.3-Flash-DFlash2，kv 池成本 ~0）、1,048,576 上下文；实测单流 46.9 tok/s（MTP-4 的 2.15×，74.1% 接受率）。",
+  "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2",
+  "compose_template": "services:\n  vllm-glm53:\n    image: ${GLM53_IMAGE:-registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2}\n    container_name: ${TASK_NAME}-rank${NODE_RANK}\n    healthcheck:\n      test: [\"CMD\", \"python3\", \"-c\", \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:${VLLM_PORT:-8000}/health', timeout=5).status == 200 else 1)\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 900s\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"32gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n      nofile: 1048576\n    gpus: all\n    devices:\n      - /dev/infiniband:/dev/infiniband\n    volumes:\n      # 生产 launcher 把权重挂在 /cache/huggingface（HF_HOME 指向它）\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/cache/huggingface\n    environment:\n      HF_HOME: /cache/huggingface\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      TRANSFORMERS_OFFLINE: \"1\"\n      VLLM_ENGINE_READY_TIMEOUT_S: \"3600\"\n      # Triton / FlashInfer JIT 编译缓存挂已持久化的 HF 缓存内，容器重建不丢\n      TRITON_CACHE_DIR: \"${TRITON_CACHE_DIR:-/cache/huggingface/.tritoncache-glm53}\"\n      FLASHINFER_JIT_CACHE_DIR: \"${FLASHINFER_JIT_CACHE_DIR:-/cache/huggingface/.flashinfer-glm53}\"\n      # SM121 架构 + fp8 KV 所需（源 launcher 全部保留）\n      TORCH_CUDA_ARCH_LIST: \"12.1a\"\n      FLASHINFER_CUDA_ARCH_LIST: \"12.1a\"\n      FLASHINFER_DISABLE_VERSION_CHECK: \"1\"\n      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True\n      VLLM_HOST_IP: \"${VLLM_HOST_IP:-}\"\n      # 网络：RoCE，HCA 由 hca 自动键逗号分隔填充；GID 每启动动态解析\n      NCCL_NET: \"${NCCL_NET:-IB}\"\n      NCCL_IB_DISABLE: \"0\"\n      NCCL_IB_HCA: \"${NCCL_IB_HCA:-}\"\n      NCCL_IB_GID_INDEX: \"${NCCL_IB_GID_INDEX:-}\"\n      NCCL_IB_GID_AUTO: \"1\"\n      NCCL_IB_ADDR_FAMILY: AF_INET\n      NCCL_IB_ROCE_VERSION_NUM: 2\n      NCCL_SOCKET_IFNAME: \"${NCCL_SOCKET_IFNAME:-}\"\n      GLOO_SOCKET_IFNAME: \"${GLOO_SOCKET_IFNAME:-${NCCL_SOCKET_IFNAME}}\"\n      NCCL_NVLS_ENABLE: \"0\"\n      NCCL_CROSS_NIC: \"0\"\n      NCCL_IB_MERGE_NICS: \"0\"\n      NCCL_CUMEM_ENABLE: \"0\"\n      NCCL_IGNORE_CPU_AFFINITY: \"1\"\n      NCCL_DEBUG: WARN\n      TORCH_NCCL_ASYNC_ERROR_HANDLING: \"1\"\n    command:\n      - bash\n      - -lc\n      - >\n        export PATH=\"/usr/local/cuda/bin:/usr/local/bin:$${PATH:-}\";\n        export CUDA_HOME=\"$${CUDA_HOME:-/usr/local/cuda}\";\n        export CUDA_PATH=\"$${CUDA_PATH:-$${CUDA_HOME}}\";\n        export CUDAToolkit_ROOT=\"$${CUDAToolkit_ROOT:-$${CUDA_HOME}}\";\n        export LD_LIBRARY_PATH=\"/usr/local/cuda/lib64:$${LD_LIBRARY_PATH:-}\";\n        exec /usr/local/bin/vllm serve ${GLM53_MODEL_PATH:-LibertAIDAI/GLM-5.3-Flash-NVFP4}\n        --served-model-name ${SERVED_MODEL_NAME:-glm-5.3-flash}\n        --host ${VLLM_HOST:-0.0.0.0}\n        --port ${VLLM_PORT:-8000}\n        --trust-remote-code\n        --tensor-parallel-size 4\n        --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}\n        --max-model-len ${MAX_MODEL_LEN:-1048576}\n        --max-num-seqs ${MAX_NUM_SEQS:-6}\n        --block-size 2304\n        --moe-backend marlin\n        --speculative-config '{\"method\":\"dflash\",\"model\":\"${GLM53_DRAFT_PATH:-incoai/GLM-5.3-Flash-DFlash2}\",\"num_speculative_tokens\":${DFLASH2_NUM_SPECULATIVE_TOKENS:-7}}'\n        --kv-cache-dtype fp8_e4m3\n        --kv-cache-memory ${KV_CACHE_MEMORY:-25769803776}\n        --enforce-eager\n        --tool-call-parser glm47\n        --enable-auto-tool-choice\n        --reasoning-parser glm45\n        --default-chat-template-kwargs '{\"enable_thinking\": false}'\n        ${CHAT_TEMPLATE:+--chat-template ${CHAT_TEMPLATE}}\n        --distributed-executor-backend mp\n        --nnodes ${NODES_TOTAL:-4}\n        --node-rank ${NODE_RANK}\n        --master-addr ${MASTER_ADDR}\n        --master-port ${MASTER_PORT:-29521}\n        ${HEADLESS:+--headless}\n",
+  "variables": [
+    {
+      "key": "GLM53_IMAGE",
+      "label": "vLLM 镜像",
+      "type": "string",
+      "source": "user",
+      "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2",
+      "picker": "image",
+      "help": "阿里云 ACR 平台镜像：由上游 sm121-v8 构建链 + 4-patch DFlash2 overlay 烘焙 （qwen3_dflash2 + dflash2/ + registry/selection wiring、GLM aux hidden-state 捕获含 mHC 收缩、drafter KV 组并入 GLM 快速路径 slot-share MLA 张量）",
+      "label_en": "vLLM image",
+      "help_en": "Aliyun ACR platform image: baked from the upstream sm121-v8 build chain + 4-patch DFlash2 overlay (qwen3_dflash2 + dflash2/ + registry/selection wiring, GLM aux hidden-state capture with mHC contraction, drafter KV group slot-shares the MLA tensors inside GLM's fast path)"
+    },
+    {
+      "key": "GLM53_MODEL_PATH",
+      "label": "模型路径",
+      "type": "string",
+      "source": "user",
+      "default": "LibertAIDAI/GLM-5.3-Flash-NVFP4",
+      "picker": "model",
+      "required": true,
+      "help": "NVFP4 量化权重（Lane A 主力：LibertAIDAI/GLM-5.3-Flash-NVFP4，120 分片 ~182GiB）；同为 Lane A drop-in 的 uncensored 版可换 drowzeys/keys-GLM-5.3-Flash-NVFP4-ablit-l15-45-anchorstock（同 launcher 已验证）；也可填缓存内 snapshot 绝对路径",
+      "label_en": "Model path",
+      "help_en": "NVFP4 quant weights (Lane A main: LibertAIDAI/GLM-5.3-Flash-NVFP4, 120 shards ~182 GiB); swap in the same-lane uncensored drop-in drowzeys/keys-GLM-5.3-Flash-NVFP4-ablit-l15-45-anchorstock (verified on the same launcher); or use an absolute snapshot path in the cache"
+    },
+    {
+      "key": "GLM53_DRAFT_PATH",
+      "label": "DFlash2 Drafter 模型",
+      "type": "string",
+      "source": "user",
+      "default": "incoai/GLM-5.3-Flash-DFlash2",
+      "picker": "model",
+      "required": true,
+      "help": "DFlash2 块扩散草稿模型（qwen3 架构，5 层 SWA，dflash_config block_size=8 / selector_rank=256 / target_layer_ids [5,14,24,33,42]，单文件 model.safetensors 2.34GB）；与主模型一样由平台分发到节点 HF 缓存，容器内按 repo id 离线解析（HF_HOME=/cache/huggingface）",
+      "label_en": "DFlash2 drafter model",
+      "help_en": "DFlash2 block-diffusion draft model (qwen3 arch, 5 SWA layers, dflash_config block_size=8 / selector_rank=256 / target_layer_ids [5,14,24,33,42], single model.safetensors 2.34GB); distributed to the node HF cache like the main model and resolved offline by repo id (HF_HOME=/cache/huggingface)"
+    },
+    {
+      "key": "SERVED_MODEL_NAME",
+      "label": "对外服务名",
+      "type": "string",
+      "source": "user",
+      "default": "glm-5.3-flash",
+      "label_en": "Served model name"
+    },
+    {
+      "key": "VLLM_PORT",
+      "label": "vLLM API 端口",
+      "type": "int",
+      "source": "user",
+      "default": "8000",
+      "label_en": "vLLM API port"
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "label": "最大上下文长度",
+      "type": "int",
+      "source": "user",
+      "default": "1048576",
+      "help": "模型原生 1M；降低（如 300000）可让多用户端更跟手，须保持 64 对齐",
+      "label_en": "Max context length",
+      "help_en": "Model-native 1M; lower it (e.g. 300000) for a snappier multi-user endpoint, keep 64-aligned"
+    },
+    {
+      "key": "MAX_NUM_SEQS",
+      "label": "最大并发序列数",
+      "type": "int",
+      "source": "user",
+      "default": "6",
+      "help": "源 launcher 生产 6（TP4 每 rank ~50GiB 权重，6 个全 262K 会话槽位齐平）",
+      "label_en": "Max concurrent sequences",
+      "help_en": "Upstream launcher production value 6 (TP4 ~50 GiB weights/rank, six full-262K slots)"
+    },
+    {
+      "key": "GPU_MEMORY_UTILIZATION",
+      "label": "GPU 显存利用率",
+      "type": "float",
+      "source": "user",
+      "default": "0.85",
+      "help": "源 launcher 生产 0.85；与固定 KV_CACHE_MEMORY 搭配，改动请先用真实长 prefill 把关",
+      "label_en": "GPU memory utilization",
+      "help_en": "Upstream launcher production 0.85; paired with the pinned KV_CACHE_MEMORY — gate any change behind a real long prefill"
+    },
+    {
+      "key": "KV_CACHE_MEMORY",
+      "label": "每节点 KV 缓存预算（字节）",
+      "type": "int",
+      "source": "user",
+      "default": "25769803776",
+      "help": "每 rank fp8 KV 预算，源 launcher 现役 24GiB（25769803776）；head-to-head 的 5,033,164 token 池按 32GiB/rank 测得。GB10 上更大的池并发 prefill 会猝死（NVRM OOM）——每次加大必须用真实长 prefill 把关，勿盲升",
+      "label_en": "Per-node KV cache budget (bytes)",
+      "help_en": "Per-rank fp8 KV budget; the upstream launcher ships 24 GiB (25769803776); the 5,033,164-token pool in the head-to-head was measured at 32 GiB/rank. Bigger pools can die under concurrent prefills on GB10 (NVRM OOM) — gate every bump behind a real long prefill"
+    },
+    {
+      "key": "DFLASH2_NUM_SPECULATIVE_TOKENS",
+      "label": "DFlash2 投机 token 数（block_size-1）",
+      "type": "int",
+      "source": "user",
+      "default": "7",
+      "help": "必须是 block_size-1=7：drafter 按 8 的 block 训练，末位是目标模型已验证 token；填 8 会草稿一个模型从未学过的位置",
+      "label_en": "DFlash2 speculative tokens (block_size-1)",
+      "help_en": "Must be block_size-1=7: the drafter is trained for a block of 8 and the last position is the target's own verified token; 8 drafts a position the model never learned"
+    },
+    {
+      "key": "CHAT_TEMPLATE",
+      "label": "Chat 模板（含 Vision）",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "容器内 chat 模板绝对路径；默认空=用 checkpoint 自带 text-only 模板（纯文本可用）。要开 Vision 需把源仓库的 chat_template_mm.jinja 放进节点缓存并填其路径（图片/视频请求无 mm 模板会 500）",
+      "label_en": "Chat template (Vision-capable)",
+      "help_en": "Absolute in-container chat-template path; empty = checkpoint's built-in text-only template (text works). For Vision, place chat_template_mm.jinja from the upstream repo in the node cache and set this to its path (image/video requests 500 without the mm template)"
+    },
+    {
+      "key": "MASTER_PORT",
+      "label": "分布式主端口",
+      "type": "int",
+      "source": "user",
+      "default": "29521",
+      "label_en": "Distributed master port"
+    },
+    {
+      "key": "MASTER_ADDR",
+      "label": "Head 节点地址",
+      "type": "string",
+      "source": "cluster",
+      "auto": "head_roce_ip",
+      "required": true,
+      "help": "自动填充 head 节点的 RoCE IP（多节点协调地址，随任务的 head 变化）",
+      "label_en": "Head address",
+      "help_en": "Filled with the head node's RoCE IP (multi-node coordination address, follows per-task head)"
+    },
+    {
+      "key": "NODES_TOTAL",
+      "label": "节点总数",
+      "type": "int",
+      "source": "cluster",
+      "auto": "nodes_total",
+      "required": true,
+      "help": "由任务节点数自动填充（本配方为固定 4 节点拓扑，发布时校验恰好匹配）",
+      "label_en": "Node count",
+      "help_en": "Auto-filled from task node count (fixed 4-node topology; publish validates exact match)"
+    },
+    {
+      "key": "NODE_RANK",
+      "label": "节点序号",
+      "type": "int",
+      "source": "node",
+      "auto": "node_rank",
+      "required": true,
+      "label_en": "Node rank"
+    },
+    {
+      "key": "HEADLESS",
+      "label": "Headless（worker 不跑 API server）",
+      "type": "string",
+      "source": "node",
+      "auto": "headless",
+      "help": "自动按角色填充：head 为空、worker 为 1（mp 多节点协调必需）",
+      "label_en": "Headless (worker: no API server)",
+      "help_en": "Auto-filled per role: empty on head, 1 on workers (required for mp multi-node coordination)"
+    },
+    {
+      "key": "VLLM_HOST_IP",
+      "label": "本节点 vLLM 绑定 IP",
+      "type": "string",
+      "source": "node",
+      "auto": "node_roce_ip",
+      "help": "必须为各节点 RoCE IP，避免分布式绑定错误地址",
+      "label_en": "Local vLLM bind IP",
+      "help_en": "Must be each node's RoCE IP to avoid binding the wrong address"
+    },
+    {
+      "key": "NCCL_IB_HCA",
+      "label": "RoCE HCA",
+      "type": "string",
+      "source": "node",
+      "auto": "hca",
+      "help": "hca 自动键按节点返回逗号分隔多 rail（源单 rail：rocep1s0f0）",
+      "label_en": "RoCE HCA",
+      "help_en": "The hca auto key returns comma-separated rails per node (upstream single-rail: rocep1s0f0)"
+    },
+    {
+      "key": "NCCL_SOCKET_IFNAME",
+      "label": "NCCL 网络接口",
+      "type": "string",
+      "source": "node",
+      "auto": "netdev",
+      "help": "auto 返回首选 RoCE 口；多 rail 场景可手工覆盖",
+      "label_en": "NCCL network interface",
+      "help_en": "auto returns the preferred RoCE interface; override for multi-rail"
+    },
+    {
+      "key": "NCCL_IB_GID_INDEX",
+      "label": "RoCE GID index",
+      "type": "int",
+      "source": "node",
+      "auto": "gid_index",
+      "help": "每节点/HCA 不同且重启漂移，自动解析（源 launcher 用固定 gid_index=3，本配方按节点动态解析）",
+      "label_en": "RoCE GID index",
+      "help_en": "Per-node/per-HCA and drifts across reboots; auto-resolved (upstream hard-codes gid_index=3; this recipe resolves per node)"
+    }
+  ],
+  "version": "1.0.0",
+  "nodes": 4,
+  "name_en": "GLM-5.3-Flash NVFP4 (TP=4 · DFlash2)",
+  "description_en": "4-node TP=4 serving for GLM-5.3-Flash (320B/A18B MoE, glm5_next) NVFP4 quant — Lane A fp8 KV + DFlash2 block-diffusion spec decode: ACR-baked v8-dflash2 image (upstream 8-layer patch + 4-patch DFlash2 overlay), fp8_e4m3 KV, DFlash2 drafter (incoai/GLM-5.3-Flash-DFlash2, ~zero KV-pool cost), 1,048,576 context; measured 46.9 tok/s single-stream (2.15x over MTP-4, 74.1% acceptance)."
+}
