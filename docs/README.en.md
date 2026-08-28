@@ -19,6 +19,7 @@ Current recipes:
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **single node** SGLang · flashinfer + DSPARK spec (mamba draft) · **FP8 KV** · `--mamba-full-memory-ratio 11.01` (suspected typo, to verify) |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **4-node TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** context · spark-kit production overlays |
+| GLM-5.3-Flash (Lane A) | `radixark/vllm-glm53-flash:sm121-v8` | **4-node TP=4** · **fp8 KV** (FlashInfer SM12x unlock) · MTP k=4 · **1M context** · ~55 tok/s structured decode · NVFP4 quant (uncensored drop-in available) |
 
 > **Fixed topology**: every recipe declares an exact node count (e.g., 2 nodes · TP=2 or
 > 4 nodes · TP=4); Fireworks publish must match it exactly, as parameters are tuned for the

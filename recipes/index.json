@@ -140,6 +140,36 @@
       "description_en": "4-node TP=4 + DCP4 serving for GLM-5.2 QuantTrio (Int4-Int8Mix unpruned): AEON v0.27.1 platform image + b12x + spark-kit production overlays (B12X MLA SPARSE + a2a + MTP k=2 + nvfp4_ds_mla + 315,968 context).",
       "name": "GLM-5.2 QuantTrio DCP4",
       "name_en": "GLM-5.2 QuantTrio DCP4"
+    },
+    {
+      "id": "glm-5.3-flash-nvfp4-tp4-4x",
+      "provider": "zai-org",
+      "model": "zai-org/GLM-5.3-Flash",
+      "path": "recipes/glm-5.3-flash-nvfp4-tp4-4x/fireworks.recipe.json",
+      "readme": "recipes/glm-5.3-flash-nvfp4-tp4-4x/README.md",
+      "readme_en": "recipes/glm-5.3-flash-nvfp4-tp4-4x/README.en.md",
+      "version": "1.0.0",
+      "params": "320B/18B NVFP4",
+      "context_length": 1048576,
+      "modality": "text",
+      "nodes": 4,
+      "image": "radixark/vllm-glm53-flash:sm121-v8",
+      "tags": [
+        "gb10",
+        "glm-5.3",
+        "flash",
+        "nvfp4",
+        "fp8-kv",
+        "tp4",
+        "mtp",
+        "1m-context",
+        "glm5-next",
+        "agentic"
+      ],
+      "description": "GLM-5.3-Flash（320B/A18B MoE）NVFP4 四节点 TP=4 服务（Lane A — fp8 KV，FlashInfer SM12x unlock）：radixark sm121-v8 镜像、fp8_e4m3 KV、MTP k=4、1M 上下文、~55 tok/s 结构化解码。",
+      "description_en": "4-node TP=4 serving for GLM-5.3-Flash (320B/A18B MoE) NVFP4 — Lane A fp8 KV (FlashInfer SM12x unlock): radixark sm121-v8 image, fp8_e4m3 KV, MTP k=4, 1M context, ~55 tok/s structured decode.",
+      "name": "GLM-5.3-Flash NVFP4 Lane A",
+      "name_en": "GLM-5.3-Flash NVFP4 Lane A"
     }
   ]
 }
