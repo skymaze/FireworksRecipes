@@ -75,6 +75,7 @@ MTP k=2 基线 ~24.6。1M serve（util 0.87）：KV 池 **1,754,237** token / **
 - **EXL3 ≠ NVFP4**：`--quantization exl3` 固定；权重、KV、镜像必须配套。草稿 KV 为 `auto`/bf16、
   TP=1（dense DFlash2 用不了目标的 `fp8_ds_mla`）；目标仍 `fp8`。
 - 冷启动慢，健康检查 start_period 900s；CUDA graphs 已开，勿 `--enforce-eager`。
+- 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`，否则 CUDA graph 捕获会溢出 smem），与上游 start.sh 一致。
 - NCCL 必须用 CX7 直连口（auto 键按节点填），否则 `ncclCommInitRank` 悬挂。
 
 ## 参考来源

@@ -81,6 +81,7 @@ auto-filled by Fireworks; `SERVED_MODEL_NAME` (default `GLM-5.3-Flash-EXL3`) and
 - **EXL3 ≠ NVFP4**: `--quantization exl3` is fixed; weights, KV and image must match. Draft KV is
   `auto`/bf16, TP=1 (dense DFlash2 cannot use the target's `fp8_ds_mla`); the target stays `fp8`.
 - Cold start is slow; healthcheck `start_period` is 900s. CUDA graphs are on — do not `--enforce-eager`.
+- The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, which otherwise oversubscribes smem during CUDA-graph capture) — same as upstream start.sh.
 - NCCL must use the direct CX7 ports (auto-filled per node), or `ncclCommInitRank` hangs.
 
 ## References
