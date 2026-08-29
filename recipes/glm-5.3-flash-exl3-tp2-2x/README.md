@@ -27,15 +27,15 @@ DFlash2 k=7 · Structured/Code 高接受档 · temp 0 · thinking off · 400 tok
 
 实验室（C1，median 5×400）：Structured **61.7** tok/s（0.918 accept）；Prose 26.9；长上下文（~60–100k KV）24–27；
 MTP k=2 基线 ~24.6。上游 1M serve（util 0.87，同池 1,754,237 token / **1.75×** / 690 blocks / **18.67 GiB**）；
-KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.61 GiB）；先确认发布拉到了最新 `:exl3`，
+KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.61 GiB）；先核对节点 `:exl3` 与上游同一构建，
 仍在 0.87 不够时再调高 util（≥0.90）。
 前缀缓存 block-aligned（3584-token）命中，~7.7k 后续轮 93% 命中、TTFT 9.7s → 1.17s。
 
 ## 快速开始
 
 - 集群：恰好 **2 台**节点（head + 1 worker），CX7 直连（NCCL 不能走 10.0.0.x loopback 别名）。
-- 镜像：`ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3`（GHCR 公开，无需登录）。
-  `:exl3` 是可变 tag，拉取策略为 `always`（与上游每次 `docker pull` 一致）——节点缓存旧镜像会导致 KV 池偏小。
+- 镜像：`ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3`（GHCR 公开，无需登录；节点不支持 pull，镜像由集群镜像仓库分发到各节点，本地已有即用）。
+  若 KV 池异常偏小，先核对节点上的 `:exl3` 与上游为同一构建。
 - 模型：**主模型 + DFlash2 drafter** 由 Fireworks 以 `picker=model` 分发到各节点 HF 缓存
   （`HF_HOME=/root/.cache/huggingface`，按 repo id 离线解析）。
 - **NCCL**：HCA / 网卡 / GID index 由 Fireworks 自动键按节点填充。
@@ -50,7 +50,7 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 | `GLM53EXL3_MODEL_PATH` | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` | **EXL3 主模型**（勿换 NVFP4） |
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter**（须分发到节点缓存） |
 | `MAX_MODEL_LEN` | `1000000` | 上游生产档 1M（勿降 256k） |
-| `GPU_MEMORY_UTILIZATION` | `0.87` | 上游实测值（池 ~18.67 GiB）；本机若 <14.61 GiB 先查镜像新鲜度，再调 ≥0.90 |
+| `GPU_MEMORY_UTILIZATION` | `0.87` | 上游实测值（池 ~18.67 GiB）；本机若 <14.61 GiB 先核对镜像构建，再调 ≥0.90 |
 | `MAX_NUM_SEQS` | `4` | decode 批（上游 pin） |
 | `MAX_NUM_BATCHED_TOKENS` | `1024` | 上游 pin（8192 撑爆 GB10 indexer smem） |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`；别用 bf16/nvfp4 |
@@ -73,8 +73,8 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 - 任务名即 compose 项目名：只允许小写字母/数字/`-`/`_`，**不能含点 `.`**（否则发布 502）。建议 `glm53-exl3-tp2`。
 - **Thinking 默认开**：请求顶层带 `"chat_template_kwargs": {"enable_thinking": false}` 关闭
   （`extra_body` 是 SDK 选项，别裸发 HTTP 嵌套对象）。
-- `usage.prompt_tokens_details.cached_tokens` 可核对前缀缓存命中（`--enable-prefix-caching` 已开；
-  OpenAI API 无状态，仅 block-aligned 前缀命中）。
+- `usage.prompt_tokens_details.cached_tokens` 可核对前缀缓存命中（`--enable-prefix-caching` +
+  `--enable-prompt-tokens-details` 已开；OpenAI API 无状态，仅 block-aligned 前缀命中）。
 - **EXL3 ≠ NVFP4**：`--quantization exl3` 固定；权重、KV、镜像必须配套。草稿 KV 为 `auto`/bf16、
   TP=1（dense DFlash2 用不了目标的 `fp8_ds_mla`）；目标仍 `fp8`。
 - **KV 余量因机而异**：boot 日志的 `Available KV cache memory` 若低于 14.61 GiB（1M 硬需求），
