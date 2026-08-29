@@ -27,15 +27,19 @@ DFlash2 k=7 · Structured/Code high-accept regime · temp 0 · thinking off · 4
 | ×4 | 6.30 s | 37.1 | **146.5** |
 
 Lab (C1, median 5×400): Structured **61.7** tok/s (0.918 accept); Prose 26.9; long-context
-(~60–100k KV) 24–27; MTP k=2 baseline ~24.6. 1M serve (util 0.87): KV pool **1,754,237** tokens /
-**1.75×** / 690 blocks / **18.67 GiB**; prefix cache is block-aligned (3584-token): a ~7.7k
-follow-up hits 93%, TTFT 9.7 s → 1.17 s.
+(~60–100k KV) 24–27; MTP k=2 baseline ~24.6. Upstream 1M serve (util 0.87, same pool 1,754,237
+/ **1.75×** / 690 blocks / **18.67 GiB**). KV headroom drifts per boot — this kit once left only
+11.77 GiB at 0.87 (< the 14.61 GiB a 1M seq needs); first make sure the publish pulled the latest
+`:exl3`, then raise util (≥0.90) only if 0.87 still falls short. Prefix
+cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 1.17 s.
 
 ## Quick start
 
 - Cluster: exactly **2** nodes (head + 1 worker), direct CX7 cabling (NCCL cannot use 10.0.0.x
   loopback aliases).
 - Image: `ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3` (public GHCR, no login).
+  `:exl3` is a mutable tag and the compose pulls it with `pull_policy: always` (upstream `docker pull`s
+  every start) — a stale cached tag is a common cause of a smaller-than-expected KV pool.
 - Models: the **main model + DFlash2 drafter** are distributed by Fireworks via `picker=model` to
   each node's HF cache (`HF_HOME=/root/.cache/huggingface`, resolved offline by repo id).
 - **NCCL**: HCA / interface / GID index auto-filled per node by Fireworks auto keys.
@@ -50,7 +54,7 @@ follow-up hits 93%, TTFT 9.7 s → 1.17 s.
 | `GLM53EXL3_MODEL_PATH` | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` | **EXL3 main model** (no NVFP4) |
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter** (must reach the node cache) |
 | `MAX_MODEL_LEN` | `1000000` | upstream production 1M (do not drop to 256k) |
-| `GPU_MEMORY_UTILIZATION` | `0.87` | 1,754,237-token pool |
+| `GPU_MEMORY_UTILIZATION` | `0.87` | upstream-validated (pool ~18.67 GiB); if your boot is <14.61 GiB check image freshness first, then raise to ≥0.90 |
 | `MAX_NUM_SEQS` | `4` | decode batch (upstream pin) |
 | `MAX_NUM_BATCHED_TOKENS` | `1024` | upstream pin (8192 blows the GB10 indexer smem) |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`; not bf16/nvfp4 |
@@ -77,9 +81,12 @@ auto-filled by Fireworks; `SERVED_MODEL_NAME` (default `GLM-5.3-Flash-EXL3`) and
   `"chat_template_kwargs": {"enable_thinking": false}` (`extra_body` is an SDK option — do not
   send a nested object over raw HTTP).
 - `usage.prompt_tokens_details.cached_tokens` verifies prefix-cache hits (`--enable-prefix-caching`
-  + `--enable-prompt-tokens-details` on; the OpenAI API is stateless — only block-aligned prefixes hit).
+  on; the OpenAI API is stateless — only block-aligned prefixes hit).
 - **EXL3 ≠ NVFP4**: `--quantization exl3` is fixed; weights, KV and image must match. Draft KV is
   `auto`/bf16, TP=1 (dense DFlash2 cannot use the target's `fp8_ds_mla`); the target stays `fp8`.
+- **KV headroom varies per kit**: if the boot log's `Available KV cache memory` is below 14.61 GiB
+  (the 1M requirement), raise `GPU_MEMORY_UTILIZATION` (≥0.90); too high loses headroom over the
+  MM / long-prefill activation peak.
 - Cold start is slow; healthcheck `start_period` is 900s. CUDA graphs are on — do not `--enforce-eager`.
 - The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, which otherwise oversubscribes smem during CUDA-graph capture) — same as upstream start.sh.
 - NCCL must use the direct CX7 ports (auto-filled per node), or `ncclCommInitRank` hangs.
