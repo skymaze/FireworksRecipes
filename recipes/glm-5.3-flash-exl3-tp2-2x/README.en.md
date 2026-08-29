@@ -29,8 +29,10 @@ DFlash2 k=7 · Structured/Code high-accept regime · temp 0 · thinking off · 4
 Lab (C1, median 5×400): Structured **61.7** tok/s (0.918 accept); Prose 26.9; long-context
 (~60–100k KV) 24–27; MTP k=2 baseline ~24.6. Upstream 1M serve (util 0.87, same pool 1,754,237
 / **1.75×** / 690 blocks / **18.67 GiB**). KV headroom drifts per boot — this kit once left only
-11.77 GiB at 0.87 (< the 14.61 GiB a 1M seq needs); first verify the node `:exl3` is the same build
-as upstream, then raise util (≥0.90) only if 0.87 still falls short. Prefix
+11.77 GiB at 0.87 (< the 14.61 GiB a 1M seq needs). First verify the node `:exl3` is the same build as
+upstream; if it is just short, prefer `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` (drops the CUDA-graph
+memory deduction, returning ~2.6 GiB to KV while graphs stay on — upstream 2026-08-29 CG_ESTIMATE knob),
+then raise util (≥0.90) only as a last resort. Prefix
 cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 1.17 s.
 
 ## Quick start
@@ -55,6 +57,7 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter** (must reach the node cache) |
 | `MAX_MODEL_LEN` | `1000000` | upstream production 1M (do not drop to 256k) |
 | `GPU_MEMORY_UTILIZATION` | `0.87` | upstream-validated (pool ~18.67 GiB); if your boot is <14.61 GiB verify the image build first, then raise to ≥0.90 |
+| `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `1` | 0 = drop the CUDA-graph KV deduction, ~2.6 GiB back (graphs stay on; try first when the pool is short) |
 | `MAX_NUM_SEQS` | `4` | decode batch (upstream pin) |
 | `MAX_NUM_BATCHED_TOKENS` | `1024` | upstream pin (8192 blows the GB10 indexer smem) |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`; not bf16/nvfp4 |
@@ -88,7 +91,7 @@ auto-filled by Fireworks; `SERVED_MODEL_NAME` (default `GLM-5.3-Flash-EXL3`) and
   (the 1M requirement), raise `GPU_MEMORY_UTILIZATION` (≥0.90); too high loses headroom over the
   MM / long-prefill activation peak.
 - Cold start is slow; healthcheck `start_period` is 900s. CUDA graphs are on — do not `--enforce-eager`.
-- The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, which otherwise oversubscribes smem during CUDA-graph capture) — same as upstream start.sh.
+- The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, which otherwise oversubscribes smem during CUDA-graph capture, and the XGrammar speculative-decode termination backports) — same as upstream start.sh (2026-08-29 added runtime `patch_xgrammar_termination.py`).
 - NCCL must use the direct CX7 ports (auto-filled per node), or `ncclCommInitRank` hangs.
 
 ## References

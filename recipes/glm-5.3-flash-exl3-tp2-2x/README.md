@@ -28,7 +28,8 @@ DFlash2 k=7 · Structured/Code 高接受档 · temp 0 · thinking off · 400 tok
 实验室（C1，median 5×400）：Structured **61.7** tok/s（0.918 accept）；Prose 26.9；长上下文（~60–100k KV）24–27；
 MTP k=2 基线 ~24.6。上游 1M serve（util 0.87，同池 1,754,237 token / **1.75×** / 690 blocks / **18.67 GiB**）；
 KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.61 GiB）；先核对节点 `:exl3` 与上游同一构建，
-仍在 0.87 不够时再调高 util（≥0.90）。
+差一口气时优先把 `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` 设为 0（去掉 CUDA-graph 显存预留，
+还 KV ~2.6 GiB，graphs 仍开；上游 2026-08-29 CG_ESTIMATE 旋钮），仍不够再调高 util（≥0.90）。
 前缀缓存 block-aligned（3584-token）命中，~7.7k 后续轮 93% 命中、TTFT 9.7s → 1.17s。
 
 ## 快速开始
@@ -51,6 +52,7 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter**（须分发到节点缓存） |
 | `MAX_MODEL_LEN` | `1000000` | 上游生产档 1M（勿降 256k） |
 | `GPU_MEMORY_UTILIZATION` | `0.87` | 上游实测值（池 ~18.67 GiB）；本机若 <14.61 GiB 先核对镜像构建，再调 ≥0.90 |
+| `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `1` | 0 = 去掉 CUDA-graph 显存预留还 KV ~2.6 GiB（graphs 仍开；KV 池不足时先试它） |
 | `MAX_NUM_SEQS` | `4` | decode 批（上游 pin） |
 | `MAX_NUM_BATCHED_TOKENS` | `1024` | 上游 pin（8192 撑爆 GB10 indexer smem） |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`；别用 bf16/nvfp4 |
@@ -80,7 +82,8 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 - **KV 余量因机而异**：boot 日志的 `Available KV cache memory` 若低于 14.61 GiB（1M 硬需求），
   调高 `GPU_MEMORY_UTILIZATION`（≥0.90）；过高会对 MM/长 prefill 峰值失去余量。
 - 冷启动慢，健康检查 start_period 900s；CUDA graphs 已开，勿 `--enforce-eager`。
-- 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`，否则 CUDA graph 捕获会溢出 smem），与上游 start.sh 一致。
+- 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`、xgrammar 投机解码终止修复等），
+  与上游 start.sh 一致（2026-08-29 又新增 `patch_xgrammar_termination.py` 运行时执行）。
 - NCCL 必须用 CX7 直连口（auto 键按节点填），否则 `ncclCommInitRank` 悬挂。
 
 ## 参考来源
