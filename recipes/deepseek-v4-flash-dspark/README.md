@@ -95,12 +95,6 @@ JIT，避免 TP 失同步）。
   上游 #141 证据与 #151 的 opt-in workaround。
 - 仅支持恰好 2 节点（TP=2）；其他拓扑请选对应配方或自建。
 
-## 镜像构建来源
-
-构建上下文在 `FireworksProject/dspark-image-build/`
-（Dockerfile + entrypoint.sh + patches/），基镜像 Anemll `0.1.1`，快照
-`MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark @ 0107cef`（v0.1.1-hotfix2）。
-
 ## 参考来源
 
 完整来源见仓库根 `NOTICE.md`：

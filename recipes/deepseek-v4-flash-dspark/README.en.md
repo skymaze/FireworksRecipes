@@ -102,12 +102,6 @@ mid-serve re-JIT on container recreate, avoiding a TP-pair-desync hazard).
 - Exactly 2 nodes (TP=2) only; pick a matching recipe or author your own for other
   topologies.
 
-## Image build source
-
-Build context lives at `FireworksProject/dspark-image-build/`
-(Dockerfile + entrypoint.sh + patches/); base image Anemll `0.1.1`, snapshot
-`MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark @ 0107cef` (v0.1.1-hotfix2).
-
 ## References
 
 References (full attribution in the repo-root `NOTICE.md`):
