@@ -3,7 +3,7 @@
 用 Fireworks 在 **恰好 2 台** DGX Spark（head + 1 worker，RoCE 组网）上跑起
 DeepSeek-V4-Flash：
 
-- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix`
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix2`
   （在 Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` 上烘焙了 **Mia 完整 fail-closed
   热修复链**，启动时应用到 `vllm serve` 前）
 - 拓扑：**固定 2 节点 · TP=2**，FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文
@@ -29,7 +29,7 @@ DeepSeek-V4-Flash：
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `DSPARK_VLLM_IMAGE` | `…/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix` | Mia 热修复烘焙镜像 |
+| `DSPARK_VLLM_IMAGE` | `…/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix2` | Mia 热修复烘焙镜像 |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-0731` | 已下载模型 |
 | `DSPARK_REVISION` | 空 | 留空=自动用本地缓存快照 sha（离线安全）；显式钉住须匹配实际快照 |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-0731` | 对外服务名 |
@@ -44,9 +44,9 @@ DeepSeek-V4-Flash：
 | `DEFAULT_THINKING` | `max` | 思考模式 off/low/high/max |
 | `DSPARK_MAX_INFLIGHT_PREFILLS` | `1` | #27：并发分块 prefill 上限（1-3）。上游 #154 实测 2 会放大混合流量公平性带宽（3.72–5.14x vs 1 的 1.68–2.04x），1 为安全默认；2-3 需自行压测后显式开启 |
 | `DSPARK_ENABLE_ISSUE31_GPU_HOTFIX` | `0` | 1 = 启用 GPU `thinking_token_budget` |
-| `DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX` | `0` | 1 = 应用上游 vLLM #52805 XGrammar 终止回移植（#136；需镜像 bake 含该补丁链） |
-| `DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT` | `0` | 1 = 兼容 type-less assistant `output_text` 单元素回放（#138；需镜像 bake 含该补丁链） |
-| `DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK` | `0` | 1 = sparse-MLA decode 固定 64 行分块（#141 随机卡死 workaround，非根因修复；需镜像 bake 含该补丁链） |
+| `DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX` | `0` | 1 = 应用上游 vLLM #52805 XGrammar 终止回移植（#136，源锁定 fail-closed） |
+| `DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT` | `0` | 1 = 兼容 type-less assistant `output_text` 单元素回放（#138，仅缺省补全） |
+| `DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK` | `0` | 1 = sparse-MLA decode 固定 64 行分块（#141 随机卡死 workaround，非根因修复） |
 | `DSPARK_API_KEYS` | 空 | 空格分隔多 key 认证（留空无认证） |
 
 `NODES_TOTAL`（固定 2）、`MASTER_ADDR`、`NODE_RANK`、`HEADLESS`、`VLLM_HOST_IP`、`NCCL_*`
@@ -54,7 +54,7 @@ DeepSeek-V4-Flash：
 
 其余热修复开关（`DSPARK_SKIP_HOTFIX` 等）见 recipe 变量。
 
-## 内置热修复链（v1.2.0 · 快照 70a7cc4b，2026-08-25）
+## 内置热修复链（v1.3.0 · 快照 0107cef，2026-08-29）
 
 镜像在每次启动时按 fail-closed 顺序应用：
 
@@ -65,15 +65,15 @@ DeepSeek-V4-Flash：
 - **Shell**：#22 nvfp4_ds_mla 长上下文、#79 spin-wait、6 个 v0.27 性能回移植
   （#50312 / #49486 / #48407 / #48957 / #50298 / grammar-advance）。
 - **可选（默认关）**：`DSPARK_ENABLE_ISSUE31_GPU_HOTFIX`、`DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX`、
-  `DSPARK_API_KEYS`（多 key 认证 + 日志脱敏）。
+  `DSPARK_API_KEYS`（多 key 认证 + 日志脱敏），以及 2026-08-29 上游新增的
+  `DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX`（vLLM #52805 终止回移植）、
+  `DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT`（Responses 历史回放）、
+  `DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK`（sparse-MLA 64 行分块）。
 
-> **2026-08-29 上游追加（默认关，待镜像重 bake）**：上游 `70a7cc4b` 之后合并了
-> 三个 opt-in 补丁——#136（vLLM #52805 XGrammar 终止回移植）、#138（Responses 全
-> 历史回放兼容）、#141（sparse-MLA 固定 64 行分块 workaround）。本配方已透出对应
-> 开关变量（默认 0，不改变任何字节）；当前发布的 `v0.1.1-hotfix` 镜像烘焙于
-> `70a7cc4b`，不含这三个补丁，启用需等下一次镜像重 bake（见「镜像构建来源」）。
-> 另外 #154 已把 `DSPARK_MAX_INFLIGHT_PREFILLS` 默认从 2 调回 1（2 会放大混合流量
-> 公平性带宽，1 为安全默认），该默认值在现有镜像上即刻生效。
+> **2026-08-29 上游同步**：`v0.1.1-hotfix2` 镜像烘焙于上游 `0107cef`，相对上一版
+> 新增 #136/#138/#141 三个 opt-in 补丁及 assistant-final 分支（v1.3.0，均默认
+> 关闭）；#154 已将 `DSPARK_MAX_INFLIGHT_PREFILLS` 默认从 2 调回 1（2 会放大混合
+> 流量公平性带宽，1 为安全默认）。
 
 同时持久化 Triton / TileLang / B12X-CuTeDSL JIT 编译缓存到 HF 卷（容器重建不重复
 JIT，避免 TP 失同步）。
@@ -97,13 +97,9 @@ JIT，避免 TP 失同步）。
 
 ## 镜像构建来源
 
-构建上下文在本仓库外的 `FireworksProject/dspark-image-build/`
+构建上下文在 `FireworksProject/dspark-image-build/`
 （Dockerfile + entrypoint.sh + patches/），基镜像 Anemll `0.1.1`，快照
-`MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark @ 70a7cc4b`。
-
-> 上游 HEAD 已推进到 `0107cef`（2026-08-29）：下一次重 bake 应并入
-> #136/#138/#141 三个补丁及 entrypoint 分支（默认关），并把
-> `DSPARK_MAX_INFLIGHT_PREFILLS` 默认保持在 1；bake 后更新镜像 tag 与本节快照。
+`MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark @ 0107cef`（v0.1.1-hotfix2）。
 
 ## 参考来源
 
