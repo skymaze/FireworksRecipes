@@ -45,8 +45,11 @@ Before publishing from Fireworks:
 | `LONG_PREFILL_TOKEN_THRESHOLD` | `1024` | Long-prefill chunk threshold (#27) |
 | `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` | `4096` | SWA prefix-cache checkpoint spacing (#26) |
 | `DEFAULT_THINKING` | `max` | Thinking mode off/low/high/max |
-| `DSPARK_MAX_INFLIGHT_PREFILLS` | `2` | #27: concurrent chunked prefills (1-3) |
+| `DSPARK_MAX_INFLIGHT_PREFILLS` | `1` | #27: concurrent chunked prefills (1-3). #154 measured `2` widening the mixed-traffic fairness spread (3.72-5.14x vs 1.68-2.04x at `1`); `1` is the safe default, `2-3` are explicit operator opt-ins |
 | `DSPARK_ENABLE_ISSUE31_GPU_HOTFIX` | `0` | 1 = enable GPU `thinking_token_budget` |
+| `DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX` | `0` | 1 = apply the upstream vLLM #52805 XGrammar termination backport (#136; needs an image baked with the patch) |
+| `DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT` | `0` | 1 = accept type-less singleton assistant `output_text` replay (#138; needs an image baked with the patch) |
+| `DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK` | `0` | 1 = chunk sparse-MLA decode to fixed 64-row views (#141 stochastic-stall workaround, not a root-cause fix; needs an image baked with the patch) |
 | `DSPARK_API_KEYS` | empty | Space-separated multi-key auth (empty = no auth) |
 
 `NODES_TOTAL` (fixed 2), `MASTER_ADDR`, `NODE_RANK`, `HEADLESS`, `VLLM_HOST_IP`, `NCCL_*`
@@ -67,6 +70,16 @@ Applied fail-closed at every start:
 - **Opt-in (default off)**: `DSPARK_ENABLE_ISSUE31_GPU_HOTFIX`,
   `DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX`, `DSPARK_API_KEYS` (multi-key auth + log redaction).
 
+> **2026-08-29 upstream additions (default off, awaiting image re-bake)**: since
+> `70a7cc4b` upstream merged three opt-in patches — #136 (vLLM #52805 XGrammar
+> termination backport), #138 (Responses full-history replay compat), #141 (fixed
+> 64-row sparse-MLA decode chunking workaround). This recipe exposes the matching
+> switches (default 0, changes no bytes); the currently published `v0.1.1-hotfix`
+> image is baked at `70a7cc4b` and does not carry them, so enabling requires the
+> next image re-bake (see "Image build source"). Also, #154 reverted
+> `DSPARK_MAX_INFLIGHT_PREFILLS` to a safe `1` default (2 widens mixed-traffic
+> fairness spread) — that default applies immediately on the existing image.
+
 Triton / TileLang / B12X-CuTeDSL JIT compile caches persist on the HF volume (no
 mid-serve re-JIT on container recreate, avoiding a TP-pair-desync hazard).
 
@@ -80,6 +93,14 @@ mid-serve re-JIT on container recreate, avoiding a TP-pair-desync hazard).
   request-level `low`/`off`.
 - Concurrent long prefills still queue (#27 semantics); the 1024 threshold keeps decode
   fed, but multiple huge cold prefills are not served in parallel.
+- Concurrency stability (upstream #141/#143): sparse-MLA decode stalls are
+  **stochastic per burst**; **no tested `MAX_NUM_SEQS` value is established as generally
+  safe** — changing it alters incidence, it is not a fix. The easiest-to-miss failure
+  signal is not a restart but silent stream truncation with a missing `finish_reason`.
+  The shipped N=6/k=5 profile's 36 verify rows sit below the ~64-row boundary
+  (consistent with the hypothesis but not a verified safety property); the engine also
+  clamps CUDA-graph capture rows to 24 (the requested 36 never took effect). Read
+  upstream #141 evidence and the #151 opt-in workaround before raising admission.
 - Exactly 2 nodes (TP=2) only; pick a matching recipe or author your own for other
   topologies.
 
@@ -88,6 +109,11 @@ mid-serve re-JIT on container recreate, avoiding a TP-pair-desync hazard).
 Build context lives outside this repo at `FireworksProject/dspark-image-build/`
 (Dockerfile + entrypoint.sh + patches/); base image Anemll `0.1.1`, snapshot
 `MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark @ 70a7cc4b`.
+
+> Upstream HEAD has moved to `0107cef` (2026-08-29): the next re-bake should fold in
+> the #136/#138/#141 patches plus entrypoint branches (default off) and keep
+> `DSPARK_MAX_INFLIGHT_PREFILLS` at its `1` default; update the image tag and this
+> snapshot reference after the bake.
 
 ## References
 

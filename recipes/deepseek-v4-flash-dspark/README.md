@@ -42,8 +42,11 @@ DeepSeek-V4-Flash：
 | `LONG_PREFILL_TOKEN_THRESHOLD` | `1024` | 长 prefill 分块阈值（#27） |
 | `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` | `4096` | SWA prefix-cache 检查点间隔（#26） |
 | `DEFAULT_THINKING` | `max` | 思考模式 off/low/high/max |
-| `DSPARK_MAX_INFLIGHT_PREFILLS` | `2` | #27：并发分块 prefill 上限（1-3） |
+| `DSPARK_MAX_INFLIGHT_PREFILLS` | `1` | #27：并发分块 prefill 上限（1-3）。上游 #154 实测 2 会放大混合流量公平性带宽（3.72–5.14x vs 1 的 1.68–2.04x），1 为安全默认；2-3 需自行压测后显式开启 |
 | `DSPARK_ENABLE_ISSUE31_GPU_HOTFIX` | `0` | 1 = 启用 GPU `thinking_token_budget` |
+| `DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX` | `0` | 1 = 应用上游 vLLM #52805 XGrammar 终止回移植（#136；需镜像 bake 含该补丁链） |
+| `DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT` | `0` | 1 = 兼容 type-less assistant `output_text` 单元素回放（#138；需镜像 bake 含该补丁链） |
+| `DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK` | `0` | 1 = sparse-MLA decode 固定 64 行分块（#141 随机卡死 workaround，非根因修复；需镜像 bake 含该补丁链） |
 | `DSPARK_API_KEYS` | 空 | 空格分隔多 key 认证（留空无认证） |
 
 `NODES_TOTAL`（固定 2）、`MASTER_ADDR`、`NODE_RANK`、`HEADLESS`、`VLLM_HOST_IP`、`NCCL_*`
@@ -64,6 +67,14 @@ DeepSeek-V4-Flash：
 - **可选（默认关）**：`DSPARK_ENABLE_ISSUE31_GPU_HOTFIX`、`DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX`、
   `DSPARK_API_KEYS`（多 key 认证 + 日志脱敏）。
 
+> **2026-08-29 上游追加（默认关，待镜像重 bake）**：上游 `70a7cc4b` 之后合并了
+> 三个 opt-in 补丁——#136（vLLM #52805 XGrammar 终止回移植）、#138（Responses 全
+> 历史回放兼容）、#141（sparse-MLA 固定 64 行分块 workaround）。本配方已透出对应
+> 开关变量（默认 0，不改变任何字节）；当前发布的 `v0.1.1-hotfix` 镜像烘焙于
+> `70a7cc4b`，不含这三个补丁，启用需等下一次镜像重 bake（见「镜像构建来源」）。
+> 另外 #154 已把 `DSPARK_MAX_INFLIGHT_PREFILLS` 默认从 2 调回 1（2 会放大混合流量
+> 公平性带宽，1 为安全默认），该默认值在现有镜像上即刻生效。
+
 同时持久化 Triton / TileLang / B12X-CuTeDSL JIT 编译缓存到 HF 卷（容器重建不重复
 JIT，避免 TP 失同步）。
 
@@ -76,6 +87,12 @@ JIT，避免 TP 失同步）。
   `max_tokens`，或按请求改用 `low`/`off`。
 - 并发长 prefill 仍会排队（#27 语义）：本配方以 1024 阈值分块保证 decode 不被挤占，
   但无法并行服务多个超长冷预填充。
+- 并发稳定性（上游 #141/#143）：sparse-MLA decode 卡死是**逐 burst 随机**的，目前
+  **没有任何一个 `MAX_NUM_SEQS` 值被证明普遍安全**——改动它只改变出现概率，不是修复。
+  最容易被忽视的故障信号不是重启，而是缺失 `finish_reason` 的静默流截断。默认
+  N=6/k=5 的 36 verify rows 落在 ~64 行边界之下（与假设一致，但未被验证为安全性质）；
+  引擎会把 CUDA graph 捕获行数钳到 24（请求的 36 从未真正生效）。提高并发前请先读
+  上游 #141 证据与 #151 的 opt-in workaround。
 - 仅支持恰好 2 节点（TP=2）；其他拓扑请选对应配方或自建。
 
 ## 镜像构建来源
@@ -83,6 +100,10 @@ JIT，避免 TP 失同步）。
 构建上下文在本仓库外的 `FireworksProject/dspark-image-build/`
 （Dockerfile + entrypoint.sh + patches/），基镜像 Anemll `0.1.1`，快照
 `MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark @ 70a7cc4b`。
+
+> 上游 HEAD 已推进到 `0107cef`（2026-08-29）：下一次重 bake 应并入
+> #136/#138/#141 三个补丁及 entrypoint 分支（默认关），并把
+> `DSPARK_MAX_INFLIGHT_PREFILLS` 默认保持在 1；bake 后更新镜像 tag 与本节快照。
 
 ## 参考来源
 
