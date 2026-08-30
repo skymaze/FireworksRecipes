@@ -209,12 +209,12 @@
       "path": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/README.en.md",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "params": "320B/18B NVFP4",
       "context_length": 262144,
       "modality": "text",
       "nodes": 2,
-      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8-dflash2",
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2",
       "tags": [
         "gb10",
         "glm-5.3",
@@ -226,8 +226,8 @@
         "speculative",
         "262k-context"
       ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE）NVFP4 双节点 TP=2 服务（fp8 KV + DFlash2 块扩散投机解码）：上游「the one to copy」档位、C1–C6 并发零失败、262,144 上下文、3GiB KV pin、warm 单流 46.9 tok/s。",
-      "description_en": "2-node TP=2 serving for GLM-5.3-Flash (320B/A18B MoE) NVFP4 — fp8 KV + DFlash2 block-diffusion spec decode: the upstream “the one to copy” tier, C1-C6 zero failures, 262,144 context, 3 GiB KV pin, 46.9 tok/s single-stream warm.",
+      "description": "GLM-5.3-Flash（320B/A18B MoE，glm5_next）NVFP4 双节点 TP=2 服务（fp8 KV + DFlash2 块扩散投机）：上游「the one to copy」档位——C1–C6 并发扫描零失败、warm 单流 46.9 tok/s（74.1% 接受率，结构化 54–61 tok/s）、262,144 上下文、KV 让 profiler 定池（581,040-token，勿 pin）；v11-dflash2 镜像（与 TP4 DFlash2 同链烘焙）+ 默认 RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint（compressed-tensors，修复 ModelOpt token 损坏）。",
+      "description_en": "2-node TP=2 serving for GLM-5.3-Flash (320B/A18B MoE, glm5_next) NVFP4 quant — fp8 KV + DFlash2 block-diffusion spec decode, the upstream 'the one to copy' tier: C1-C6 concurrency sweep with zero failures, warm single-stream 46.9 tok/s (74.1% acceptance; 54-61 tok/s structured), 262,144 context, KV pool profiler-sized (581,040 tokens — do not pin); v11-dflash2 image (same bake chain as the TP4 DFlash2 recipe) + default RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint (compressed-tensors, fixes ModelOpt token corruption).",
       "name": "GLM-5.3-Flash NVFP4 DFlash2 TP=2",
       "name_en": "GLM-5.3-Flash NVFP4 DFlash2 TP=2"
     },
