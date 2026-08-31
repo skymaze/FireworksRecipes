@@ -209,7 +209,7 @@
       "path": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-nvfp4-tp2-dflash2-2x/README.en.md",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "params": "320B/18B NVFP4",
       "context_length": 262144,
       "modality": "text",
@@ -226,8 +226,8 @@
         "speculative",
         "262k-context"
       ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE，glm5_next）NVFP4 双节点 TP=2 服务（fp8 KV + DFlash2 块扩散投机）：上游「the one to copy」档位——C1–C6 并发扫描零失败、warm 单流 46.9 tok/s（74.1% 接受率，结构化 54–61 tok/s）、262,144 上下文、KV 让 profiler 定池（581,040-token，勿 pin）；v11-dflash2 镜像（与 TP4 DFlash2 同链烘焙）+ 默认 RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint（compressed-tensors，修复 ModelOpt token 损坏）。",
-      "description_en": "2-node TP=2 serving for GLM-5.3-Flash (320B/A18B MoE, glm5_next) NVFP4 quant — fp8 KV + DFlash2 block-diffusion spec decode, the upstream 'the one to copy' tier: C1-C6 concurrency sweep with zero failures, warm single-stream 46.9 tok/s (74.1% acceptance; 54-61 tok/s structured), 262,144 context, KV pool profiler-sized (581,040 tokens — do not pin); v11-dflash2 image (same bake chain as the TP4 DFlash2 recipe) + default RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint (compressed-tensors, fixes ModelOpt token corruption).",
+      "description": "GLM-5.3-Flash（320B/A18B MoE，glm5_next）NVFP4 双节点 TP=2 服务（fp8 KV + DFlash2 块扩散投机）：上游「the one to copy」档位——C1–C6 并发扫描零失败、warm 单流 46.9 tok/s（74.1% 接受率，结构化 54–61 tok/s）、262,144 上下文、--max-num-batched-tokens 8192（上游 2026-08-30 pin，TP4 实测 C4 并发 +57%，与拓扑无关）、KV 让 profiler 定池（581,040-token，勿 pin）；v11-dflash2 镜像（与 TP4 DFlash2 同链烘焙）+ 默认 RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint（compressed-tensors，修复 ModelOpt token 损坏）。",
+      "description_en": "2-node TP=2 serving for GLM-5.3-Flash (320B/A18B MoE, glm5_next) NVFP4 quant — fp8 KV + DFlash2 block-diffusion spec decode, the upstream 'the one to copy' tier: C1-C6 concurrency sweep with zero failures, warm single-stream 46.9 tok/s (74.1% acceptance; 54-61 tok/s structured), 262,144 context, max-num-batched-tokens 8192 (upstream 2026-08-30 pin, +57% C4 aggregate at TP4, topology-agnostic), KV pool profiler-sized (581,040 tokens — do not pin); v11-dflash2 image (same bake chain as the TP4 DFlash2 recipe) + default RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint (compressed-tensors, fixes ModelOpt token corruption).",
       "name": "GLM-5.3-Flash NVFP4 DFlash2 TP=2",
       "name_en": "GLM-5.3-Flash NVFP4 DFlash2 TP=2"
     },
@@ -238,7 +238,7 @@
       "path": "recipes/glm-5.3-flash-exl3-tp2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-exl3-tp2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-exl3-tp2-2x/README.en.md",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "params": "320B/18B EXL3 4bpw",
       "context_length": 1048576,
       "modality": "image-text-to-text",
@@ -258,8 +258,8 @@
         "multimodal",
         "miaai-lab"
       ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机、1M 上下文（padded slot-share）、Vision 默认开启——decode 单流 62.9 tok/s（×4 聚合 146.5）。",
-      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation, 1M context (padded slot-share), Vision on by default — 62.9 tok/s single-stream (×4 aggregate 146.5).",
+      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机、MNBT 2048（上游 2026-08-29 P1 keep，冷 prefill +3–16%）、1M 上下文（padded slot-share）、Vision 默认开——decode 单流 62.9 tok/s（×2 聚合 103.3 / ×4 聚合 146.5）。",
+      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation, MNBT 2048 (upstream 2026-08-29 P1 keep, +3-16% cold prefill), 1M context (padded slot-share), Vision on by default — 62.9 tok/s single-stream (x2 aggregate 103.3 / x4 aggregate 146.5).",
       "name": "GLM-5.3-Flash EXL3 TP=2",
       "name_en": "GLM-5.3-Flash EXL3 TP=2"
     }
