@@ -14,8 +14,8 @@ Current recipes:
 
 | Recipe | Image | Description |
 |---|---|---|
-| DeepSeek-V4-Flash (DSpark) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | 2-node TP=2 DSpark · FlashInfer b12x + dspark spec · NVFP4 DS-MLA · 1M context |
-| DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **4-node TP=4** DSpark · FlashInfer b12x + dspark k=5 · NVFP4 DS-MLA · **1M context** · verified on a real agentic workload |
+| DeepSeek-V4-Flash-Vision-Exp (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix3` | 2-node TP=2 DSpark · **native image input** (OpenAI image_url, ≤8 per request / user messages only / no video) · FlashInfer b12x + dspark spec k=6 · NVFP4 DS-MLA · **1M context** (dev, pending the hotfix3 image bake) |
+| DeepSeek-V4-Flash-0731 (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **4-node TP=4** DSpark · FlashInfer b12x + dspark k=5 · NVFP4 DS-MLA · **1M context** · verified on a real agentic workload |
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **single node** SGLang · flashinfer + DSPARK spec (mamba draft) · **FP8 KV** · `--mamba-full-memory-ratio 11.01` (suspected typo, to verify) |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **4-node TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** context · spark-kit production overlays |
@@ -65,7 +65,7 @@ FireworksRecipes/
 ├── .gitignore
 ├── recipes/
 │   ├── index.json                  # catalog manifest (store data source)
-│   ├── deepseek-v4-flash-dspark/   # fireworks.recipe.json + README(.en)
+│   ├── deepseek-v4-flash-dspark/   # fireworks.recipe.json + README(.en) · Vision-Exp multimodal (dev)
 │   ├── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
 │   ├── deepseek-v4-flash-0731-spark-b12x/   # 2-node TP=2 · eugr/spark-vllm-b12x (from docker run, not yet verified)
 │   ├── qwen38-27b-sglang-dspark/   # single node · SGLang + DSPARK (from docker run, not yet verified)

@@ -13,8 +13,8 @@
 
 | 配方 | 镜像 | 说明 |
 |---|---|---|
-| DeepSeek-V4-Flash (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix2` | 双节点 TP=2 DSpark 服务 · FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文 |
-| DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
+| DeepSeek-V4-Flash-Vision-Exp (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix3` | 双节点 TP=2 DSpark 服务 · **原生图片输入**（OpenAI image_url ≤8 张 / 仅 user 消息 / 无视频）· FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · **1M 上下文**（dev 测试中，依赖 hotfix3 镜像烘焙） |
+| DeepSeek-V4-Flash-0731 (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **单节点** SGLang 服务 · flashinfer + DSPARK 投机（mamba 草稿）· **FP8 KV** · `--mamba-full-memory-ratio 11.01`（疑似笔误，待验证） |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
@@ -76,7 +76,7 @@ FireworksRecipes/
 ├── .gitignore
 ├── recipes/
 │   ├── index.json                  # ★ 目录清单，商店数据源
-│   ├── deepseek-v4-flash-dspark/
+│   ├── deepseek-v4-flash-dspark/   # 双节点 TP=2 · Vision-Exp 多模态（dev 测试中，待 hotfix3 镜像烘焙 + 实机验证）
 │   │   ├── fireworks.recipe.json   # ★ Fireworks 原生配方
 │   │   └── README.md / README.en.md
 │   ├── deepseek-v4-flash-0731-tp4-4x/   # 4 节点 TP=4（agentic 实机验证调优）
