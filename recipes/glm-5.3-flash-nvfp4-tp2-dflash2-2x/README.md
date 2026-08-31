@@ -20,6 +20,9 @@
 - 拓扑：**2 节点 · TP=2**（`--tensor-parallel-size 2`）、`mp` 后端
 - 上下文：**262,144（262K）**（TP2 每 rank ~97 GiB 权重，勿上 1M；要 1M 用 4x 配方）
 - KV：**fp8_e4m3 · 让 profiler 定池（不传 `--kv-cache-memory`）= 581,040-token 池**（上游验证）
+- 批处理：**`--max-num-batched-tokens 8192`**（上游 2026-08-30 pin，与 TP4 同档：投机模式下
+  vLLM 会静默推导 2048 限并发吞吐，8192 在 TP4 实测 C4 并发 63→99 tok/s（+57%）且单流
+  不变；flag 与拓扑无关，TP2 同享）
 - 投机：`--speculative-config '{"method":"dflash","model":"<drafter>","num_speculative_tokens":7}'`
   （必须 7 = block_size−1）
 - 实测（上游 2026-08-28，warm）：**单流 46.9 tok/s · 74.1% 接受率**（结构化输出
@@ -60,6 +63,7 @@
 | `VLLM_PORT` | `8000` | API 端口 |
 | `MAX_MODEL_LEN` | `262144` | **上游已验证档位**（TP2 每 rank ~97 GiB 权重，勿上 1M） |
 | `MAX_NUM_SEQS` | `6` | 与上游一致 |
+| `MAX_NUM_BATCHED_TOKENS` | `8192` | 上游 2026-08-30 pin（与 TP4 同档）：不设会静默推导 2048 限并发；TP4 实测 C4 63→99 tok/s（+57%）、单流不变 |
 | `GPU_MEMORY_UTILIZATION` | `0.85` | 上游生产值（0.78–0.80 在 131K+ 饿死 KV 池）；配合 profiler 定池 |
 | `KV_CACHE_MEMORY` | （空） | **留空 = 不传 flag，profiler 定池（581,040-token）——上游推荐**；填字节数才传 `--kv-cache-memory`（勿 pin，见上） |
 | `DFLASH2_NUM_SPECULATIVE_TOKENS` | `7` | **必须 = block_size−1**；K=7 最优别扫 |
@@ -95,7 +99,8 @@ Docker Compose v5 硬性限制）。带点任务名（如 `glm5.3-flash-2x`）�
 - **`temperature: 0` 白嫖吞吐（+13–21%）**；`enable_thinking: false` 也更快（+8%）——注意
   thinking 关掉时 GLM 会把未标注的推理散文写进 `content`，某些 agent 解析器会误读。
 - 不要改：`--block-size 2304`、`--moe-backend marlin`、`--kv-cache-dtype fp8_e4m3`、
-  `--enforce-eager`、`GPU_MEMORY_UTILIZATION` 默认（0.78–0.80 饿死 KV）。
+  `--enforce-eager`、`GPU_MEMORY_UTILIZATION` 默认（0.78–0.80 饿死 KV）、
+  `MAX_NUM_BATCHED_TOKENS` 默认 8192（同 TP4 上游 pin）。
 - 内存纪律：`vm.swappiness=0` **强制**且**重启不保留**（要持久化）；swap 完全关掉会让 worker
   在 MoE marlin repack 时被杀、默认 swappiness 会让 UVM 驱动活锁。
 - 起停纪律：先全部 teardown 再重启任一 rank；发布核对各节点 `IMAGE` 一致；`docker logs`

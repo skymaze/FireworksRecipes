@@ -24,6 +24,10 @@ config to copy").
   4-node recipe for 1M)
 - KV: **fp8_e4m3 · let the profiler size the pool (no `--kv-cache-memory`) = 581,040-token
   pool** (upstream-verified)
+- Batching: **`--max-num-batched-tokens 8192`** (upstream 2026-08-30 pin, same tier as TP4:
+  under spec decode vLLM silently derives 2048 and caps concurrent throughput; 8192 measured
+  C4 63→99 tok/s (+57%) at TP4 with single-stream unchanged; the flag is topology-agnostic,
+  so TP2 gets the same win)
 - Speculation: `--speculative-config '{"method":"dflash","model":"<drafter>","num_speculative_tokens":7}'`
   (**must be 7 = block_size−1**)
 - Measured (upstream 2026-08-28, warm): **46.9 tok/s single-stream · 74.1% draft acceptance**
@@ -67,6 +71,7 @@ config to copy").
 | `VLLM_PORT` | `8000` | API port |
 | `MAX_MODEL_LEN` | `262144` | **Upstream-validated tier** (~97 GiB weights/rank at TP2 — do not use 1M) |
 | `MAX_NUM_SEQS` | `6` | Same as upstream |
+| `MAX_NUM_BATCHED_TOKENS` | `8192` | Upstream 2026-08-30 pin (same as TP4): unset, vLLM silently derives 2048 and caps concurrency; TP4 measured C4 63→99 tok/s (+57%), single-stream unchanged |
 | `GPU_MEMORY_UTILIZATION` | `0.85` | Upstream production value (0.78–0.80 starve the KV cache at 131K+); pairs with profiler sizing |
 | `KV_CACHE_MEMORY` | (empty) | **Empty = do not pass the flag, profiler-sized pool (581,040 tokens) — upstream-recommended**; only fills in `--kv-cache-memory` when set (do not pin, see above) |
 | `DFLASH2_NUM_SPECULATIVE_TOKENS` | `7` | **Must = block_size−1**; K=7 is optimal, do not sweep |
@@ -107,7 +112,8 @@ Use a dot-free name like `glm53-dflash2-tp2`.
   (+8 %) — note GLM emits untagged reasoning-prose into `content` with thinking off, which
   some agent harnesses mis-parse.
 - Do not change: `--block-size 2304`, `--moe-backend marlin`, `--kv-cache-dtype fp8_e4m3`,
-  `--enforce-eager`, the default `GPU_MEMORY_UTILIZATION` (0.78–0.80 starve KV).
+  `--enforce-eager`, the default `GPU_MEMORY_UTILIZATION` (0.78–0.80 starve KV),
+  the default `MAX_NUM_BATCHED_TOKENS` 8192 (same TP4 upstream pin).
 - Memory discipline: `vm.swappiness=0` is **mandatory** and **does not survive a reboot**
   (persist it); with swap fully off the worker dies during MoE marlin repack, with default
   swappiness the UVM driver livelocks.
