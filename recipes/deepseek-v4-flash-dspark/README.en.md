@@ -133,12 +133,18 @@ Applied on every container start in fail-closed order:
   `DSPARK_API_KEYS` (multi-key auth + log redaction).
 
 > **2026-08-31 upstream sync (v1.4.0)**: retargeted to `DeepSeek-V4-Flash-Vision-Exp`
-> (upstream PR #164 `feat/vision-exp`, snapshot `d58c877`): model/served name/image
+> (upstream PR #164 `feat/vision-exp`, snapshot `de230b45bc49…`): model/served name/image
 > tag all switched, `MTP_NUM_TOKENS` default 5 → 6 (Vision-Exp `n_predict=3`), new
 > `LIMIT_MM_PER_PROMPT` (images per request). Vs `v0.1.1-hotfix2` (snapshot
-> `0107cef`), the chain also gains the #165 fix (paired `<image>` tag role check).
-> **The `v0.1.1-hotfix3` image is baked against that upstream snapshot; confirm
-> the tag is pullable from the Images page before publishing.**
+> `0107cef`), the image gains: native Vision-Exp image support (#164), the paired
+> `<image>` tag role check (#165), and the tool-result text scan skip (#167).
+> **`v0.1.1-hotfix3` is baked and pushed to ACR** (manifest `sha256:e9c9dca7…`,
+> single-arch arm64, 2026-09-01). In-container dry-run verified: full hotfix chain
+> order, the vision trio (model/encoding/dspark) APPLIED, `--limit-mm-per-prompt
+> {"image":N}` conversion, the MTP-6 capture size 42, and fail-closed refusal
+> without the checkpoint encoding. **The checkpoint distribution still needs
+> hardware validation** — confirm the Model page has distributed
+> `DeepSeek-V4-Flash-Vision-Exp` to both nodes before publishing.
 
 Triton / TileLang / B12X-CuTeDSL JIT compile caches are persisted to the HF
 volume (container reinstantiation doesn't re-JIT and TP stays in sync).
@@ -167,11 +173,10 @@ volume (container reinstantiation doesn't re-JIT and TP stays in sync).
   verify rows (6×7); the engine may clamp CUDA-graph capture rows to ~32. Read
   upstream #141 evidence and the #151 opt-in workaround before raising it.
 - Exactly 2 nodes (TP=2) only; other topologies need another recipe.
-- **Dev-branch recipe**: v1.4.0 depends on the `v0.1.1-hotfix3` image (baked from
-  the upstream 2026-08-31 snapshot) and the `DeepSeek-V4-Flash-Vision-Exp`
-  checkpoint distribution; neither is hardware-validated in this repo yet.
-  Confirm the tag is pullable and the model is distributed to both nodes before
-  publishing.
+- **Dev-branch recipe**: v1.4.0 depends on the `v0.1.1-hotfix3` image (pushed to
+  ACR on 2026-09-01) and the `DeepSeek-V4-Flash-Vision-Exp` checkpoint
+  distribution (**not hardware-validated yet**); confirm the Model page has
+  distributed the checkpoint to both nodes before publishing.
 
 ## References
 

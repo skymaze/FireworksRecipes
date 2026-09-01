@@ -118,11 +118,16 @@ Maximum concurrency for 1,048,576 tokens per request: 2.22x
   `DSPARK_API_KEYS`（多 key 认证 + 日志脱敏）。
 
 > **2026-08-31 上游同步（v1.4.0）**：retarget 到 `DeepSeek-V4-Flash-Vision-Exp`
-> （上游 PR #164 `feat/vision-exp`，快照 `d58c877`）：模型/服务名/镜像 tag 全部切换，
-> `MTP_NUM_TOKENS` 默认 5 → 6（Vision-Exp `n_predict=3`），新增
+> （上游 PR #164 `feat/vision-exp`，快照 `de230b45bc49…`），模型/服务名/镜像 tag 全部
+> 切换，`MTP_NUM_TOKENS` 默认 5 → 6（Vision-Exp `n_predict=3`），新增
 > `LIMIT_MM_PER_PROMPT`（每请求图片上限）。相对 `v0.1.1-hotfix2`（快照 `0107cef`），
-> 热修复链还新增 #165 修复（`<image>` 字面子串误判）。
-> **`v0.1.1-hotfix3` 镜像按上游该快照烘焙；发布前请确认镜像页可拉取。**
+> 镜像还新增：Vision-Exp 原生图片支持（#164）、`<image>` 配对标签角色检查（#165）、
+> tool 结果文本不再误判图片（#167）。**`v0.1.1-hotfix3` 已烘焙推送 ACR**
+> （manifest `sha256:e9c9dca7…`，单架构 arm64，2026-09-01），容器内干跑验证：
+> 热修复链序完整、vision 三件套（model/encoding/dspark）APPLIED、
+> `--limit-mm-per-prompt {"image":N}` 转换与 `MTP=42` capture 尺寸正确、
+> 缺 checkpoint encoding 时 fail-closed 拒启。**checkpoint 分发仍需实机验证**，
+> 发布前请确认「模型页」已分发 `DeepSeek-V4-Flash-Vision-Exp` 到两节点。
 
 同时持久化 Triton / TileLang / B12X-CuTeDSL JIT 编译缓存到 HF 卷（容器重建不重复
 JIT，避免 TP 失同步）。
@@ -147,9 +152,9 @@ JIT，避免 TP 失同步）。
   N=6/k=6 的 verify 行数为 42（6×7），引擎可能把 CUDA graph 捕获行数钳到 ~32；
   提高并发前请先读上游 #141 证据与 #151 的 opt-in workaround。
 - 仅支持恰好 2 节点（TP=2）；其他拓扑请选对应配方或自建。
-- **dev 分支配方**：v1.4.0 依赖 `v0.1.1-hotfix3` 镜像（上游 2026-08-31 快照烘焙）与
-  `DeepSeek-V4-Flash-Vision-Exp` checkpoint 分发，均未在本仓实机验证；发布前请确认
-  「镜像页」可拉取该 tag 且模型已分发到两节点。
+- **dev 分支配方**：v1.4.0 依赖 `v0.1.1-hotfix3` 镜像（已推送 ACR，2026-09-01）与
+  `DeepSeek-V4-Flash-Vision-Exp` checkpoint 分发（**未实机验证**）；发布前请确认
+  「模型页」已把 checkpoint 分发到两节点。
 
 ## 参考来源
 
