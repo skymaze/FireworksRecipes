@@ -1,0 +1,141 @@
+{
+  "name": "Qwen3.8-Flash-Next（单节点 vLLM）",
+  "name_en": "Qwen3.8-Flash-Next (single-node vLLM)",
+  "description": "Qwen3.8-Flash-Next（176.9B，其中 51.2B n-gram/PLE 查找表由 NVMe 流式加载）单节点 vLLM 服务：RadixArk NVFP4 checkpoint（含全视觉塔与 31 个 MTP 张量）、MTP 训练草稿头 k=3 投机、PIECEWISE CUDA-graph 捕获（PLE 查找声明为 split op）、前缀缓存默认开（共享前缀 +76%）、262,144 原生上下文（KV 池 641,601 token）、多模态 0.967；~32 tok/s 自由文本、prefill ~2,030-2,460 tok/s。源自 0xBakeer/qwen38-flash-next-spark 的 longctx 路线（dev：ACR 镜像待烘焙，尚未实机验证）。",
+  "description_en": "Single-node vLLM serving for Qwen3.8-Flash-Next (176.9B, with the 51.2B n-gram/PLE lookup table streamed from NVMe): RadixArk NVFP4 checkpoint (full vision tower + all 31 MTP tensors), MTP trained-draft k=3 speculation, PIECEWISE CUDA-graph capture (PLE gather declared a splitting op), prefix caching on by default (+76% shared-prefix), full 262,144 native context (641,601-token KV pool), multimodal at 0.967; ~32 tok/s free-form, prefill ~2,030-2,460 tok/s. Ported from the longctx lane of 0xBakeer/qwen38-flash-next-spark (dev: ACR image to be baked, not yet verified on hardware).",
+  "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0",
+  "compose_template": "services:\n  vllm-qwen38fn:\n    image: ${VLLM_IMAGE:-registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0}\n    container_name: ${TASK_NAME}-qwen38fn\n    healthcheck:\n      test: [\"CMD\", \"python3\", \"-c\", \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:${VLLM_PORT:-8000}/health', timeout=5).status == 200 else 1)\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 900s\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"16gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n    gpus: all\n    volumes:\n      # 与源 docker run 一致：宿主 HF 缓存挂到 /hf（镜像内 HF_HOME=/hf，按 HF repo id 离线解析）\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/hf\n    environment:\n      HF_HOME: /hf\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      HF_TOKEN: \"${HF_TOKEN:-}\"\n      # blazux PLE-mmap：51.2B n-gram 查找表由 NVMe 流式加载（本配方成立的核心开关，勿关）\n      VLLM_PLE_MMAP: \"1\"\n      VLLM_PLE_MMAP_WORKERS: \"${PLE_MMAP_WORKERS:-32}\"\n      VLLM_PLE_MMAP_PREWARM: \"${PLE_MMAP_PREWARM:-1}\"\n      VLLM_USE_FLASHINFER_SAMPLER: \"1\"\n      VLLM_ENGINE_READY_TIMEOUT_S: \"3600\"  # 冷启动读 ~83 GiB 权重，12-15 分钟\n    command:\n      - bash\n      - -lc\n      - >\n        exec vllm serve ${QWN38_MODEL:-RadixArk/Qwen3.8-Flash-Next-NVFP4}\n        --served-model-name ${SERVED_MODEL_NAME:-qwen3.8-flash-next}\n        --host 0.0.0.0\n        --port ${VLLM_PORT:-8000}\n        --load-format safetensors\n        --max-model-len ${MAX_MODEL_LEN:-262144}\n        --max-num-seqs ${MAX_NUM_SEQS:-16}\n        --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}\n        $( [ \"${PREFIX_CACHE:-1}\" = \"1\" ] && echo --enable-prefix-caching || echo --no-enable-prefix-caching )\n        --enable-chunked-prefill\n        --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-8192}\n        -cc.cudagraph_mode=PIECEWISE\n        -cc.splitting_ops=[\"vllm::unified_attention_with_output\",\"vllm::unified_mla_attention_with_output\",\"vllm::mamba_mixer2\",\"vllm::mamba_mixer\",\"vllm::short_conv\",\"vllm::qwen3_8_flash_next_ple_short_conv\",\"vllm::qwen3_8_flash_next_qsa_with_output\",\"vllm::linear_attention\",\"vllm::qwen_gdn_attention_core\",\"vllm::qwen_gdn_attention_core_fused_norm_packed\",\"vllm::sparse_attn_indexer\",\"vllm::ple_mmap_lookup\"]\n        --no-enable-flashinfer-autotune\n        --enable-auto-tool-choice\n        --tool-call-parser qwen3_coder\n        --reasoning-parser qwen3\n        $( [ \"${MTP:-3}\" != \"0\" ] && printf -- '--speculative-config {\"method\":\"mtp\",\"num_speculative_tokens\":%s}' \"${MTP:-3}\" )\n",
+  "variables": [
+    {
+      "key": "VLLM_IMAGE",
+      "label": "vLLM 镜像",
+      "label_en": "vLLM image",
+      "type": "string",
+      "source": "user",
+      "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0",
+      "picker": "image",
+      "help": "ACR 烘焙镜像（源自 blazux/qwen3.8-Flash-DGX，Apache-2.0：官方 vllm/vllm-openai:qwen38-flash-next 基底 + PLE-mmap 等 7 个补丁；dev 阶段待烘焙后配方方可发布）",
+      "help_en": "ACR-baked image (from blazux/qwen3.8-Flash-DGX, Apache-2.0: official vllm/vllm-openai:qwen38-flash-next base + 7 patches incl. PLE-mmap; dev phase — image must be baked before the recipe is publishable)"
+    },
+    {
+      "key": "QWN38_MODEL",
+      "label": "模型",
+      "label_en": "Model",
+      "type": "string",
+      "source": "user",
+      "default": "RadixArk/Qwen3.8-Flash-Next-NVFP4",
+      "required": true,
+      "picker": "model",
+      "help": "NVFP4 checkpoint（~122GiB，保留全视觉塔 + 全部 31 个 MTP 张量）；由管理平台分发给节点 HF 缓存，按 repo id 离线解析",
+      "help_en": "NVFP4 checkpoint (~122 GiB, keeps the full vision tower + all 31 MTP tensors); distributed to the node HF cache and resolved offline by repo id"
+    },
+    {
+      "key": "SERVED_MODEL_NAME",
+      "label": "对外服务名",
+      "label_en": "Served model name",
+      "type": "string",
+      "source": "user",
+      "default": "qwen3.8-flash-next"
+    },
+    {
+      "key": "VLLM_PORT",
+      "label": "vLLM API 端口",
+      "label_en": "vLLM API port",
+      "type": "int",
+      "source": "user",
+      "default": "8000"
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "label": "最大上下文长度",
+      "label_en": "Max context length",
+      "type": "int",
+      "source": "user",
+      "default": "262144",
+      "help": "模型原生最大窗口；gmu 0.85 下 KV 池实测 641,601 token（≈2.4× 全量 262K）",
+      "help_en": "The model's native maximum window; at gmu 0.85 the KV pool measured 641,601 tokens (~2.4x a full 262K)"
+    },
+    {
+      "key": "MAX_NUM_SEQS",
+      "label": "最大并发序列数",
+      "label_en": "Max concurrent sequences",
+      "type": "int",
+      "source": "user",
+      "default": "16",
+      "help": "16 = 最后一段被良好服务的并发（TTFT <2.7s，聚合 96-109 tok/s）；批量任务可设 64（聚合 +35%、TTFT 衰减，见 README）",
+      "help_en": "16 = the last concurrency served well (TTFT <2.7s, 96-109 tok/s aggregate); raise to 64 for batch work (+35% aggregate, degraded TTFT — see README)"
+    },
+    {
+      "key": "MAX_NUM_BATCHED_TOKENS",
+      "label": "单批最大 token 数",
+      "label_en": "Max batched tokens",
+      "type": "int",
+      "source": "user",
+      "default": "8192",
+      "help": "源默认 8192；不要为前缀缓存命中而调它",
+      "help_en": "Upstream default 8192; do not tune it for prefix-cache hits"
+    },
+    {
+      "key": "GPU_MEMORY_UTILIZATION",
+      "label": "GPU 显存利用率",
+      "label_en": "GPU memory utilization",
+      "type": "float",
+      "source": "user",
+      "default": "0.85",
+      "help": "源 0.85（上游默认 0.78 时 KV 只有 227,651 token < 262,144，单条全长请求放不下）；0.85 实测 18.13 GiB KV",
+      "help_en": "Upstream 0.85 (at the upstream default 0.78 the KV pool is only 227,651 tokens — short of a single full-length request); 0.85 measured 18.13 GiB of KV"
+    },
+    {
+      "key": "MTP",
+      "label": "MTP 投机 token 数",
+      "label_en": "MTP speculative tokens",
+      "type": "int",
+      "source": "user",
+      "default": "3",
+      "help": "模型自带训练 MTP 草稿头（k=3，上游档位；>3 反而更差；0 = 关闭，用于 A/B）。只在批未饱和时有收益：单流节奏 +35%，16 并发时不可测",
+      "help_en": "The model's trained MTP draft head (k=3, the upstream tier; >3 makes it worse; 0 disables, for an A/B). Pays only while the batch is unsaturated: +35% at one caller, unmeasurable at 16 concurrent"
+    },
+    {
+      "key": "PREFIX_CACHE",
+      "label": "前缀缓存",
+      "label_en": "Prefix caching",
+      "type": "int",
+      "source": "user",
+      "default": "1",
+      "help": "1（默认）= --enable-prefix-caching（共享前缀聚合 +76%，多轮对话/agent 有利）；0 = 关闭，复现本仓库发布的 prefill 数字（全部在无缓存下测）",
+      "help_en": "1 (default) = --enable-prefix-caching (+76% aggregate on shared prefixes; helps multi-turn chat/agents); 0 = off, reproduces the published prefill figures (all measured cache-free)"
+    },
+    {
+      "key": "PLE_MMAP_WORKERS",
+      "label": "PLE 表流式读取 worker 数",
+      "label_en": "PLE table streaming workers",
+      "type": "int",
+      "source": "user",
+      "default": "32",
+      "help": "VLLM_PLE_MMAP_WORKERS：n-gram 表 NVMe 流式预取并发的 worker 数",
+      "help_en": "VLLM_PLE_MMAP_WORKERS: concurrent workers prefetching the n-gram table from NVMe"
+    },
+    {
+      "key": "PLE_MMAP_PREWARM",
+      "label": "启动预热 PLE 表",
+      "label_en": "Prewarm PLE table at boot",
+      "type": "int",
+      "source": "user",
+      "default": "1",
+      "help": "VLLM_PLE_MMAP_PREWARM：启动时先流式读一遍表，首个请求不冷启动",
+      "help_en": "VLLM_PLE_MMAP_PREWARM: stream the table once at boot so the first request is not cold"
+    },
+    {
+      "key": "HF_TOKEN",
+      "label": "HuggingFace Token",
+      "label_en": "HuggingFace token",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "受 gating 的模型授权 token；模型已由管理平台分发到缓存时通常可留空",
+      "help_en": "Auth token for gated models; usually empty when the model is pre-distributed to the cache"
+    }
+  ],
+  "version": "1.0.0",
+  "nodes": 1
+}
