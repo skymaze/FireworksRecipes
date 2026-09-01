@@ -3,7 +3,7 @@
 Serve DeepSeek-V4-Flash-**Vision-Exp** with Fireworks on **exactly 2** DGX Spark
 nodes (head + 1 worker, RoCE):
 
-- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix3`
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4`
   (Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` baked with the **full Mia
   fail-closed hotfix chain + Vision-Exp native image support**, applied at
   startup before `vllm serve`)
@@ -40,7 +40,7 @@ Before publishing:
 - Model: `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` distributed to nodes
   (incl. `encoding/encoding_dsv4.py`; the Vision-Exp ViT+Aligner weights take
   more VRAM than 0731, shrinking the KV pool).
-- Image: ACR hotfix image `v0.1.1-hotfix3` (upstream snapshot `de230b45…`,
+- Image: ACR hotfix image `v0.1.1-hotfix4` (upstream snapshot `de230b45…`,
   2026-08-31) pullable.
 
 > Node count is locked to **exactly 2**; TP/distributed knobs are tuned for it.
@@ -59,7 +59,7 @@ curl -s http://<head-ip>:8888/v1/chat/completions \
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix3` | Mia hotfix-baked image (incl. Vision-Exp image support) |
+| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix4` | Mia hotfix-baked image (incl. Vision-Exp image support) |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` | Downloaded model |
 | `DSPARK_REVISION` | empty | Empty = auto-resolve local snapshot sha (offline-safe); upstream pin is `86f746b3…` |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-vision-exp` | Served model name |
@@ -139,7 +139,7 @@ Applied on every container start in fail-closed order:
 > `LIMIT_MM_PER_PROMPT` (images per request). Vs `v0.1.1-hotfix2` (snapshot
 > `0107cef`), the image gains: native Vision-Exp image support (#164), the paired
 > `<image>` tag role check (#165), and the tool-result text scan skip (#167).
-> **`v0.1.1-hotfix3` is baked and pushed to ACR** (manifest `sha256:e9c9dca7…`,
+> **`v0.1.1-hotfix4` is baked and pushed to ACR** (manifest `sha256:e9c9dca7…`,
 > single-arch arm64, 2026-09-01). In-container dry-run verified: full hotfix chain
 > order, the vision trio (model/encoding/dspark) APPLIED, `--limit-mm-per-prompt
 > {"image":N}` conversion, the MTP-6 capture size 42, and fail-closed refusal
@@ -156,7 +156,7 @@ volume (container reinstantiation doesn't re-JIT and TP stays in sync).
   k must be ≥ `dspark_block_size`(5) and divisible by 3; k=5 is rejected outright.
 - Images in **user messages only**: `image`/`image_url` parts in system/assistant
   messages return HTTP 400 (matches official Chat Completions); plain text that
-  mentions `<image>` is fine (#165 fixed, effective in hotfix3).
+  mentions `<image>` is fine (#165 fixed, effective since hotfix3).
 - **No video**: the official weights ship no video encoder; GIF is decoded as a
   still RGB frame.
 - The b12x stack at 1M context is VRAM-tight, and Vision-Exp weights take more
@@ -174,7 +174,7 @@ volume (container reinstantiation doesn't re-JIT and TP stays in sync).
   verify rows (6×7); the engine may clamp CUDA-graph capture rows to ~32. Read
   upstream #141 evidence and the #151 opt-in workaround before raising it.
 - Exactly 2 nodes (TP=2) only; other topologies need another recipe.
-- **Dev-branch recipe**: v1.0.0 depends on the `v0.1.1-hotfix3` image (pushed to
+- **Dev-branch recipe**: v1.0.0 depends on the `v0.1.1-hotfix4` image (pushed to
   ACR on 2026-09-01) and the `DeepSeek-V4-Flash-Vision-Exp` checkpoint
   distribution (**not hardware-validated yet**); confirm the Model page has
   distributed the checkpoint to both nodes before publishing.

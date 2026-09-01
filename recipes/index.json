@@ -42,7 +42,7 @@
       "context_length": 1048576,
       "modality": "image-text-to-text",
       "nodes": 2,
-      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix3",
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4",
       "tags": [
         "gb10",
         "dspark",

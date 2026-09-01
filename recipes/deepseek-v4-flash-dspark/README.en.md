@@ -102,7 +102,7 @@ mid-serve re-JIT on container recreate, avoiding a TP-pair-desync hazard).
 - Exactly 2 nodes (TP=2) only; pick a matching recipe or author your own for other
   topologies.
 - **Mind the image version**: this recipe pins `v0.1.1-hotfix2` (0731 snapshot,
-  the hardware-verified baseline). The registry also hosts `v0.1.1-hotfix3`
+  the hardware-verified baseline). The registry also hosts `v0.1.1-hotfix4`
   (upstream 2026-08-31 vision-exp bake, native Vision-Exp image support and the
   MTP=6 pin) — but that image is **not hardware-verified against the 0731
   checkpoint**. Keep hotfix2 for 0731; for multimodal use the

@@ -15,7 +15,7 @@ Current recipes:
 | Recipe | Image | Description |
 |---|---|---|
 | DeepSeek-V4-Flash (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix2` | 2-node TP=2 DSpark · FlashInfer b12x + dspark spec · NVFP4 DS-MLA · 1M context |
-| [DeepSeek-V4-Flash-Vision-Exp (DSpark)](../recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix3` | **2-node TP=2** (multimodal) · **native image input** (OpenAI image_url, ≤8 per request / user messages only / no video) · FlashInfer b12x + dspark spec k=6 · NVFP4 DS-MLA · **1M context** (dev: image baked & pushed; checkpoint hardware-validation pending) |
+| [DeepSeek-V4-Flash-Vision-Exp (DSpark)](../recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4` | **2-node TP=2** (multimodal) · **native image input** (OpenAI image_url, ≤8 per request / user messages only / no video) · FlashInfer b12x + dspark spec k=6 · NVFP4 DS-MLA · **1M context** (dev: image baked & pushed; checkpoint hardware-validation pending) |
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **4-node TP=4** DSpark · FlashInfer b12x + dspark k=5 · NVFP4 DS-MLA · **1M context** · verified on a real agentic workload |
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **single node** SGLang · flashinfer + DSPARK spec (mamba draft) · **FP8 KV** · `--mamba-full-memory-ratio 11.01` (suspected typo, to verify) |

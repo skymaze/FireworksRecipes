@@ -95,7 +95,7 @@ JIT，避免 TP 失同步）。
   上游 #141 证据与 #151 的 opt-in workaround。
 - 仅支持恰好 2 节点（TP=2）；其他拓扑请选对应配方或自建。
 - **注意镜像版本**：本配方默认 `v0.1.1-hotfix2`（0731 快照，实机验证基线）。镜像仓库
-  另有 `v0.1.1-hotfix3`（上游 2026-08-31 vision-exp 快照烘焙，含原生 Vision-Exp
+  另有 `v0.1.1-hotfix4`（上游 2026-08-31 vision-exp 快照烘焙，含原生 Vision-Exp
   图片支持与 MTP=6 pin）——但该镜像与 0731 checkpoint 的组合**未实机验证**；
   跑 0731 请保持 hotfix2，多模态请用 `deepseek-v4-flash-vision-exp-dspark` 配方。
 

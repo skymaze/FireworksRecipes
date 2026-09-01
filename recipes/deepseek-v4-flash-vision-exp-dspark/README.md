@@ -3,7 +3,7 @@
 用 Fireworks 在 **恰好 2 台** DGX Spark（head + 1 worker，RoCE 组网）上跑起
 DeepSeek-V4-Flash-**Vision-Exp**：
 
-- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix3`
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4`
   （在 Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` 上烘焙了 **Mia 完整 fail-closed
   热修复链 + Vision-Exp 原生图片支持**，启动时应用到 `vllm serve` 前）
 - 拓扑：**固定 2 节点 · TP=2**，FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · 1M 上下文
@@ -32,7 +32,7 @@ DeepSeek-V4-Flash-**Vision-Exp**：
 - 模型：`deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` 已分发到节点（含
   `encoding/encoding_dsv4.py`；Vision-Exp 的 ViT+Aligner 权重比 0731 更占显存，
   KV 池相应变小）。
-- 镜像：ACR 热修复镜像 `v0.1.1-hotfix3`（上游快照 `de230b45…`，2026-08-31）已可拉取。
+- 镜像：ACR 热修复镜像 `v0.1.1-hotfix4`（上游快照 `de230b45…`，2026-08-31）已可拉取。
 
 > 节点数锁定为**恰好 2**，TP/分布式参数按此调优。
 
@@ -50,7 +50,7 @@ curl -s http://<head-ip>:8888/v1/chat/completions \
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix3` | Mia 热修复烘焙镜像（含 Vision-Exp 图片支持） |
+| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix4` | Mia 热修复烘焙镜像（含 Vision-Exp 图片支持） |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` | 已下载模型 |
 | `DSPARK_REVISION` | 空 | 留空=自动用本地缓存快照 sha（离线安全）；上游官方 pin 为 `86f746b3…` |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-vision-exp` | 对外服务名 |
@@ -123,7 +123,7 @@ Maximum concurrency for 1,048,576 tokens per request: 2.22x
 > 切换，`MTP_NUM_TOKENS` 默认 5 → 6（Vision-Exp `n_predict=3`），新增
 > `LIMIT_MM_PER_PROMPT`（每请求图片上限）。相对 `v0.1.1-hotfix2`（快照 `0107cef`），
 > 镜像还新增：Vision-Exp 原生图片支持（#164）、`<image>` 配对标签角色检查（#165）、
-> tool 结果文本不再误判图片（#167）。**`v0.1.1-hotfix3` 已烘焙推送 ACR**
+> tool 结果文本不再误判图片（#167）。**`v0.1.1-hotfix4` 已烘焙推送 ACR**
 > （manifest `sha256:e9c9dca7…`，单架构 arm64，2026-09-01），容器内干跑验证：
 > 热修复链序完整、vision 三件套（model/encoding/dspark）APPLIED、
 > `--limit-mm-per-prompt {"image":N}` 转换与 `MTP=42` capture 尺寸正确、
@@ -139,7 +139,7 @@ JIT，避免 TP 失同步）。
   `dspark_block_size`(5) 且整除 3，k=5 会被 Anemll 直接拒绝。
 - 图片仅放 **user 消息**：system/assistant 消息带 `image`/`image_url` 部分返回
   HTTP 400（对齐官方 Chat Completions 限制）；纯文本提到 `<image>` 标签没问题
-  （#165 已修，hotfix3 生效）。
+  （#165 已修，hotfix3+ 生效）。
 - **无视频**：官方权重没有视频编码器，GIF 按静帧解码。
 - b12x 栈 1M 上下文显存压力大，Vision-Exp 权重比 0731 更占显存、KV 池更小，
   `GPU_MEMORY_UTILIZATION` 默认 0.835；显存紧张或图形捕获 OOM 时可降至 ~0.80。
@@ -153,7 +153,7 @@ JIT，避免 TP 失同步）。
   N=6/k=6 的 verify 行数为 42（6×7），引擎可能把 CUDA graph 捕获行数钳到 ~32；
   提高并发前请先读上游 #141 证据与 #151 的 opt-in workaround。
 - 仅支持恰好 2 节点（TP=2）；其他拓扑请选对应配方或自建。
-- **dev 分支配方**：v1.0.0 依赖 `v0.1.1-hotfix3` 镜像（已推送 ACR，2026-09-01）与
+- **dev 分支配方**：v1.0.0 依赖 `v0.1.1-hotfix4` 镜像（已推送 ACR，2026-09-01）与
   `DeepSeek-V4-Flash-Vision-Exp` checkpoint 分发（**未实机验证**）；发布前请确认
   「模型页」已把 checkpoint 分发到两节点。
 
