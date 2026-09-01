@@ -10,8 +10,7 @@ a different image and lane from the NVFP4 (marlin) recipes in this repo:
   falls back to brandonmusic if the mirror is incomplete);
 - KV: **fp8 · packed `fp8_ds_mla`**;
 - Speculation: **DFlash2 k=7** ([incoai](https://huggingface.co/incoai/GLM-5.3-Flash-DFlash2),
-  drafter stays on rank 0 on the current image; upstream defaulted to TP-sharding the drafter
-  on 2026-08-30 — follow that only after the image rebuild); the draft shares KV pages with
+  drafter sharded across TP); the draft shares KV pages with
   MLA via **padded slot-share**;
 - Context: **1,000,000** (padded slot-share is why 1M allocates); Vision on by default (image×4 / video×1).
 
@@ -33,9 +32,8 @@ Lab (C1, median 5×400): Structured **61.7** tok/s (0.918 accept); Prose 26.9; l
 `MAX_NUM_BATCHED_TOKENS` to 2048** (8k cold TTFT 10.36s/772 → 8.93s/895, 100k 947→975, no
 decode tax; 3584/4096 lost to the LinearEXL3 fat-expert tax and were reverted; **8192 blows
 the GB10 indexer smem — never**). **On 2026-08-30 upstream also defaulted `DFLASH_DRAFT_TP`
-to 2** (drafter sharded across TP, structured 65.1 tok/s) — but that validation ran on
-upstream's newer overlay build, so **this recipe keeps the hardware-verified 1 until the
-`:exl3` image is rebuilt**.
+to 2** (drafter sharded across TP, structured 65.1 tok/s); **the image has now been rebuilt from
+upstream's current overlay (ACR `glm53-flash-exl3:v1.0.0`, @493cb88) and this recipe follows with default 2**.
 Upstream 1M serve (util 0.87, same pool 1,754,237
 / **1.75×** / 690 blocks / **18.67 GiB**). KV headroom drifts per boot — this kit once left only
 11.77 GiB at 0.87 (< the 14.61 GiB a 1M seq needs). First verify the node `:exl3` is the same build as
@@ -48,9 +46,11 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 
 - Cluster: exactly **2** nodes (head + 1 worker), direct CX7 cabling (NCCL cannot use 10.0.0.x
   loopback aliases).
-- Image: `ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3` (public GHCR, no login; the nodes do not
-  pull — the image is distributed by the cluster mirror and used when present locally).
-  If the KV pool is unexpectedly small, verify the `:exl3` on the nodes is the same build as upstream.
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0` (ACR-baked from the
+  current upstream Dockerfile, @493cb88 / 2026-08-31; the nodes do not pull — the image is distributed
+  by the cluster mirror and used when present locally).
+  If the KV pool is unexpectedly small, verify the node image is this ACR tag (the old GHCR `:exl3`
+  is the 2026-08-28 build and lacks 5 runtime patches).
 - Models: the **main model + DFlash2 drafter** are distributed by Fireworks via `picker=model` to
   each node's HF cache (`HF_HOME=/root/.cache/huggingface`, resolved offline by repo id).
 - **NCCL**: HCA / interface / GID index auto-filled per node by Fireworks auto keys.
@@ -61,7 +61,7 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 
 | Variable | Default | Notes |
 |---|---|---|
-| `GLM53EXL3_IMAGE` | `ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3` | overlay image |
+| `GLM53EXL3_IMAGE` | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0` | overlay image (ACR-baked @493cb88) |
 | `GLM53EXL3_MODEL_PATH` | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` | **EXL3 main model** (no NVFP4) |
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter** (must reach the node cache) |
 | `MAX_MODEL_LEN` | `1000000` | upstream production 1M (do not drop to 256k) |
@@ -71,7 +71,7 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 | `MAX_NUM_BATCHED_TOKENS` | `2048` | upstream 2026-08-29 P1 keep (8k −16% TTFT, 100k +3%; 3584/4096 reverted; **8192 blows the GB10 indexer smem**) |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`; not bf16/nvfp4 |
 | `GLM53EXL3_DFLASH_TOKENS` | `7` | DFlash2 tokens (trained block 8) |
-| `GLM53EXL3_DFLASH_DRAFT_TP` | `1` | drafter stays on rank 0 (the only tier hardware-verified on the current image). 2 = shard across TP (upstream 2026-08-30 keep) **enable after the :exl3 rebuild** |
+| `GLM53EXL3_DFLASH_DRAFT_TP` | `2` | drafter sharded across TP (upstream 2026-08-30 keep, structured 65.1 tok/s; followed after the image rebuild). 1 = rank 0 only |
 | `EXL3_FUSED_MOE` | `1` | fused `exl3_moe` per layer; 0 = per-expert loop |
 | `GLM53_MIXED_PREFILL_CHUNK` | `skip` | no peer prefill in a decode step (upstream pin) |
 | `GLM53_SUPPRESS_STOPS_IN_REASONING` | `1` | client stops dormant while thinking |
@@ -95,13 +95,22 @@ auto-filled by Fireworks; `SERVED_MODEL_NAME` (default `GLM-5.3-Flash-EXL3`) and
 - `usage.prompt_tokens_details.cached_tokens` verifies prefix-cache hits (`--enable-prefix-caching` +
   `--enable-prompt-tokens-details` on; the OpenAI API is stateless — only block-aligned prefixes hit).
 - **EXL3 ≠ NVFP4**: `--quantization exl3` is fixed; weights, KV and image must match. Draft KV is
-  `auto`/bf16, TP=1 (dense DFlash2 cannot use the target's `fp8_ds_mla`); the target stays `fp8`.
+  `auto`/bf16 (dense DFlash2 cannot use the target's `fp8_ds_mla`); `DFLASH_DRAFT_TP=2` (default) shards it across TP; the target stays `fp8`.
 - **KV headroom varies per kit**: if the boot log's `Available KV cache memory` is below 14.61 GiB
   (the 1M requirement), raise `GPU_MEMORY_UTILIZATION` (≥0.90); too high loses headroom over the
   MM / long-prefill activation peak.
 - Cold start is slow; healthcheck `start_period` is 900s. CUDA graphs are on — do not `--enforce-eager`.
 - The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, the XGrammar speculative-decode termination backports, etc.) — same as upstream start.sh; every patch runs behind an `if [ -f ]` guard, so missing files are skipped silently.
-- **⚠️ The published `:exl3` image lags upstream main (verified 2026-08-31)**: all three GHCR tags point to the same build from 2026-08-28 07:46Z; the 5 runtime patches the current upstream Dockerfile bakes landed in the repo only afterwards — `patch_suppress_stops_in_reasoning.py` (08-28 14:12Z), `patch_scheduler_decode_floor.py` (08-28 16:34Z), `patch_hybrid_prefix_hit.py` (08-28 23:18Z), `patch_xgrammar_termination.py` (08-29), `patch_kpool_tail_slotmap.py` (08-30) — **so on the current image all five are silently inactive** (stop suppression while thinking, decode-floor isolation of mixed prefill, MLA prefix-hit retention, the xgrammar termination fix, the kpool tail fix), and the in-image `overlay/exl3.py` is the older revision (env knobs don't exist, though MNBT=2048 behaves equivalently). **Until the image is re-published those five features are missing**: wait for the upstream GHCR rebuild, or — per this repo's convention — bake an ACR image from the current upstream Dockerfile in the mirror repo and point `GLM53EXL3_IMAGE` at it.
+- **Image build record (2026-09-01 ACR rebuild)**: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0`
+  is baked from the current upstream Dockerfile (`@493cb88` / 2026-08-31, digest `sha256:190f248a…`); all five
+  runtime patches (`suppress_stops_in_reasoning` / `scheduler_decode_floor` / `hybrid_prefix_hit` /
+  `xgrammar_termination` / `kpool_tail_slotmap`) are baked in and passed their build-time self-checks; exllamav3_ext
+  compiled with `sm_121a` cubins. The old GHCR `:exl3` build (2026-08-28 07:46Z) still lacks those five — do not
+  deploy it.
+- **KV per-token sanity check**: a healthy deployment needs ≈9.3 KB/token for the target (656 B/token/layer
+  fp8_ds_mla × 11 DSA layers + ~2 KB draft), i.e. ~9-12 GiB for 1M. If a boot error implies ~22.3 KB/token
+  (e.g. 786,432 tokens needing 16.34 GiB), the deployed image / `--kv-cache-dtype fp8` is not taking effect
+  (bf16 or a stale build) — check the image first, then adjust util.
 - NCCL must use the direct CX7 ports (auto-filled per node), or `ncclCommInitRank` hangs.
 
 ## References
