@@ -172,6 +172,36 @@
       "name_en": "Qwen3.8-Flash-Next (single-node vLLM)"
     },
     {
+      "id": "qwen38-flash-next-edit",
+      "provider": "unsloth",
+      "model": "unsloth/Qwen3.8-Flash-Next-GGUF",
+      "path": "recipes/qwen38-flash-next-edit/fireworks.recipe.json",
+      "readme": "recipes/qwen38-flash-next-edit/README.md",
+      "readme_en": "recipes/qwen38-flash-next-edit/README.en.md",
+      "version": "1.0.0",
+      "params": "176.9B（51.2B PLE 表 NVMe 流式）/ UD-Q4_K_XL",
+      "context_length": 262144,
+      "modality": "image-text-to-text",
+      "nodes": 1,
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0",
+      "tags": [
+        "gb10",
+        "qwen3.8",
+        "flash-next",
+        "llamacpp",
+        "gguf",
+        "ngram-spec",
+        "single-node",
+        "262k-context",
+        "multimodal",
+        "edit"
+      ],
+      "description": "Qwen3.8-Flash-Next（176.9B，51.2B n-gram/PLE 查找表由 NVMe 页缓存流式加载）单节点 llama.cpp 编程编辑服务：unsloth GGUF UD-Q4_K_XL + mmproj 视觉、ngram-mod 上下文复制投机（exact，改文件 88 tok/s）、f16 KV、--parallel 2、262,144 上下文、mmproj 多模态 0.967（源自 0xBakeer edit 路线）。",
+      "description_en": "Single-node llama.cpp coding-edit serving for Qwen3.8-Flash-Next (176.9B, 51.2B n-gram/PLE lookup streamed from the NVMe page cache): unsloth GGUF UD-Q4_K_XL + mmproj vision, ngram-mod context-copying speculation (exact, 88 tok/s on file rewrites), f16 KV, --parallel 2, 262,144 context, mmproj multimodal 0.967 (from the 0xBakeer edit lane).",
+      "name": "Qwen3.8-Flash-Next Edit（单节点 llama.cpp）",
+      "name_en": "Qwen3.8-Flash-Next Edit (single-node llama.cpp)"
+    },
+    {
       "id": "glm-5.2-quanttrio-tp4-dcp4-4x",
       "provider": "zhipuai",
       "model": "glm-5.2-quanttrio",

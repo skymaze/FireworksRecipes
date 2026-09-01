@@ -19,6 +19,7 @@
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **单节点** SGLang 服务 · flashinfer + DSPARK 投机（mamba 草稿）· **FP8 KV** · `--mamba-full-memory-ratio 11.01`（疑似笔误，待验证） |
 | [Qwen3.8-Flash-Next (vLLM)](recipes/qwen38-flash-next-vllm/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0` | **单节点**（176.9B）· **51.2B n-gram/PLE 查找表由 NVMe 流式加载**（PLE-mmap 补丁镜像，待烘焙）· MTP k=3 训练草稿头投机 · 前缀缓存默认开 · **262K 上下文** · 多模态 0.967 · ~32 tok/s（源自 0xBakeer longctx 路线） |
+| [Qwen3.8-Flash-Next Edit (llama.cpp)](recipes/qwen38-flash-next-edit/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0` | **单节点** llama.cpp 编程编辑路线 · **51.2B n-gram/PLE 查找表由 NVMe 页缓存流式加载** · unsloth GGUF UD-Q4_K_XL · ngram-mod 上下文复制投机（exact，改文件 88 tok/s）· f16 KV · **262K 上下文** · mmproj 多模态 0.967（源自 0xBakeer edit 路线） |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
 | GLM-5.3-Flash (Lane A) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | **四节点 TP=4** · **fp8 KV**（FlashInfer SM12x unlock）· MTP k=4 · **1M 上下文** · ~55 tok/s 结构化解码 · NVFP4 量化（默认 RedHatAI compressed-tensors，可换 uncensored drop-in）· ⚠️ 上游已标 MTP TP4 superseded，新部署用 DFlash2 |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **双节点 TP=2** · fp8 KV + **DFlash2**（incoai drafter）· **262K 上下文** · 单流 46.9 tok/s · C1–C6 零失败（上游 one-to-copy 档）· KV profiler 定池（581K，勿 pin）· 默认 RedHatAI checkpoint |
@@ -89,7 +90,8 @@ FireworksRecipes/
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
 │   ├── qwen38-27b-sglang-dspark/   # 单节点 · SGLang + DSPARK（源自 docker run，未实机验证）
-│   ├── qwen38-flash-next-vllm/   # 单节点 · vLLM（PLE 表 NVMe 流式 + MTP，源自 0xBakeer longctx，dev：镜像待烘焙）
+│   ├── qwen38-flash-next-vllm/   # 单节点 · vLLM（PLE 表 NVMe 流式 + MTP，源自 0xBakeer longctx）
+│   ├── qwen38-flash-next-edit/   # 单节点 · llama.cpp 编辑路线（PLE 表 NVMe 页缓存 + ngram-mod，源自 0xBakeer edit）
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
 │   └── glm-5.2-quanttrio-tp4-dcp4-4x/   # 4 节点 TP=4 + DCP4 · spark-kit 生产栈（镜像构建推送至 ACR）

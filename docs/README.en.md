@@ -20,6 +20,7 @@ Current recipes:
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **single node** SGLang · flashinfer + DSPARK spec (mamba draft) · **FP8 KV** · `--mamba-full-memory-ratio 11.01` (suspected typo, to verify) |
 | [Qwen3.8-Flash-Next (vLLM)](../recipes/qwen38-flash-next-vllm/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0` | **single node** (176.9B) · **51.2B n-gram/PLE lookup streamed from NVMe** (PLE-mmap patched image, to be baked) · MTP k=3 trained-draft spec · prefix caching on by default · **262K context** · multimodal 0.967 · ~32 tok/s (from the 0xBakeer longctx lane) |
+| [Qwen3.8-Flash-Next Edit (llama.cpp)](../recipes/qwen38-flash-next-edit/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0` | **single node** llama.cpp coding-edit lane · **51.2B n-gram/PLE lookup streamed from the NVMe page cache** · unsloth GGUF UD-Q4_K_XL · ngram-mod context-copying spec (exact, 88 tok/s on file rewrites) · f16 KV · **262K context** · mmproj multimodal 0.967 (from the 0xBakeer edit lane) |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **4-node TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** context · spark-kit production overlays |
 | GLM-5.3-Flash (Lane A) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | **4-node TP=4** · **fp8 KV** (FlashInfer SM12x unlock) · MTP k=4 · **1M context** · ~55 tok/s structured decode · NVFP4 quant (default RedHatAI compressed-tensors, uncensored drop-in available) · ⚠️ upstream has marked MTP TP4 superseded — use DFlash2 for new deployments |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **2-node TP=2** · fp8 KV + **DFlash2** (incoai drafter) · **262K context** · 46.9 tok/s single-stream · C1-C6 zero failures (upstream one-to-copy tier) · KV profiler-sized (581K, do not pin) · default RedHatAI checkpoint |
@@ -72,7 +73,8 @@ FireworksRecipes/
 │   ├── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
 │   ├── deepseek-v4-flash-0731-spark-b12x/   # 2-node TP=2 · eugr/spark-vllm-b12x (from docker run, not yet verified)
 │   ├── qwen38-27b-sglang-dspark/   # single node · SGLang + DSPARK (from docker run, not yet verified)
-│   ├── qwen38-flash-next-vllm/   # single node · vLLM (PLE table streamed from NVMe + MTP, from 0xBakeer longctx, dev: image to be baked)
+│   ├── qwen38-flash-next-vllm/   # single node · vLLM (PLE table streamed from NVMe + MTP, from 0xBakeer longctx)
+│   ├── qwen38-flash-next-edit/   # single node · llama.cpp edit lane (PLE table on the NVMe page cache + ngram-mod, from 0xBakeer edit)
 │   └── glm-5.2-quanttrio-tp4-dcp4-4x/   # 4-node TP=4 + DCP4 · spark-kit production stack (image built & pushed to ACR)
 ├── scripts/validate.py   # recipe/manifest validation
 ├── schemas/  manifest.schema.json · recipe.schema.json

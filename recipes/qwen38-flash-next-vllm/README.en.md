@@ -20,8 +20,10 @@ Serve **Qwen3.8-Flash-Next** (176.9B params) through vLLM on **one** DGX Spark (
 > Ported from the **longctx** (vLLM) lane of
 > [0xBakeer/qwen38-flash-next-spark](https://github.com/0xBakeer/qwen38-flash-next-spark) —
 > that repo's own recommended default ("Not sure → Writing & long documents"). The other
-> **edit** (llama.cpp) lane compiles on the host and is outside Fireworks' container model;
-> this recipe does not cover it.
+> **edit** (llama.cpp) lane is the companion recipe
+> [`qwen38-flash-next-edit`](../qwen38-flash-next-edit/README.en.md) (faster for coding agents
+> rewriting whole files, slower on free-form text, no MTP). They share the GPU — only one runs
+> at a time.
 
 ## Image (must be done before publish)
 
@@ -30,10 +32,25 @@ Upstream `blazux/qwen3.8-Flash-DGX` (Apache-2.0) does **not publish a prebuilt i
 plus 7 patches, of which the PLE-mmap patch is what makes this recipe possible). Following this
 repo's convention, bake that image and push it to
 `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0` so Fireworks can pull
-and distribute it.
+and distribute.
 
-> The dev image is not baked yet — **build & push it before publishing**, and record the baked
-> upstream commit (the `de.qwen38fn.upstream-sha` label) in this README for reproducibility.
+> Bake & push commands (upstream already cloned at `blazux/qwen3.8-Flash-DGX@209646c`):
+>
+> ```bash
+> cd blazux/qwen3.8-Flash-DGX
+> docker build -t registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0 \
+>   --label "de.qwen38fn.upstream-repo=https://github.com/blazux/qwen3.8-Flash-DGX.git" \
+>   --label "de.qwen38fn.upstream-ref=209646c" \
+>   --label "de.qwen38fn.upstream-sha=209646c" .
+> docker push registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0
+> ```
+>
+> **Build status (attempted 2026-09):** most base layers are already in the local Docker cache,
+> but the build is blocked by this machine's network — Docker Hub direct is timing out (IPv6)
+> and Docker Desktop carries a stale static proxy `127.0.0.1:1082` (pointing at a stopped Clash
+> client) that breaks the daocloud fallback. **The image is not baked/pushed yet.** Once the
+> network is back (local proxy / Clash app running, or Docker Hub reachable), continue with the
+> commands above. The in-image upstream commit label is pinned to `209646c` for reproducibility.
 
 ## Main variables
 

@@ -1,0 +1,119 @@
+{
+  "name": "Qwen3.8-Flash-Next Edit（单节点 llama.cpp）",
+  "name_en": "Qwen3.8-Flash-Next Edit (single-node llama.cpp)",
+  "description": "Qwen3.8-Flash-Next（176.9B，51.2B n-gram/PLE 查找表由 NVMe 流式加载）单节点 llama.cpp 服务——编程编辑路线：unsloth GGUF UD-Q4_K_XL（~104GiB + mmproj 视觉投影）、ngram-mod 上下文复制投机（exact，输出字节一致；改文件 88 tok/s）、-lm mmap + -ot per_layer_token_embd=CPU（PLE 表留 NVMe 页缓存）、f16 KV、--parallel 2（每槽 131,072）、262,144 上下文、多模态 mmproj 0.967。源自 0xBakeer/qwen38-flash-next-spark edit 路线。",
+  "description_en": "Single-node llama.cpp serving for Qwen3.8-Flash-Next (176.9B, with the 51.2B n-gram/PLE lookup table streamed from NVMe) — the coding-edit lane: unsloth GGUF UD-Q4_K_XL (~104 GiB + mmproj vision projector), ngram-mod context-copying speculation (exact, byte-identical output; 88 tok/s on file rewrites), -lm mmap + -ot per_layer_token_embd=CPU (PLE table served from the NVMe page cache), f16 KV, --parallel 2 (131,072 per slot), 262,144 context, multimodal mmproj 0.967. From the edit lane of 0xBakeer/qwen38-flash-next-spark.",
+  "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0",
+  "compose_template": "services:\n  llamacpp-qwen38fn:\n    image: ${LLAMACPP_IMAGE:-registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0}\n    container_name: ${TASK_NAME}-qwen38fn-edit\n    healthcheck:\n      test: [\\\"CMD\\\", \\\"python3\\\", \\\"-c\\\", \\\"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:${LLAMACPP_PORT:-8000}/health', timeout=5).status == 200 else 1)\\\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 900s\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"16gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n    gpus: all\n    volumes:\n      # GGUF 由管理平台分发到节点 HF 缓存（HF_HOME=/hf），容器按 repo id + snapshot 解析\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/hf\n    environment:\n      HF_HOME: /hf\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      HF_TOKEN: \"${HF_TOKEN:-}\"\n    command:\n      - bash\n      - -lc\n      - >\n        set -e;\n        HUB=\"$HF_HOME/hub/models--$(printf %s ${QWN38_GGUF_REPO:-unsloth/Qwen3.8-Flash-Next-GGUF} | sed 's|/|--|g')\";\n        SNAP=\"$(ls -d $HUB/snapshots/*/ 2>/dev/null | head -1)\";\n        GGUF=\"$(ls $SNAP/UD-Q4_K_XL/*00001-of-*.gguf 2>/dev/null | head -1)\";\n        [ -n \"$GGUF\" ] || { echo \"GGUF not found (repo ${QWN38_GGUF_REPO:-unsloth/Qwen3.8-Flash-Next-GGUF}) under $HF_HOME - distribute UD-Q4_K_XL/* + mmproj-F16.gguf first\"; exit 1; };\n        MMFLAG=\"\";\n        if [ \"${MMPROJ_MODE:-auto}\" != \"none\" ] && [ -f \"$SNAP/mmproj-F16.gguf\" ]; then MMFLAG=\"--mmproj $SNAP/mmproj-F16.gguf\"; fi;\n        EXTRA_ARGV=\"\";\n        if [ -n \"${EXTRA_ARGS:-}\" ]; then EXTRA_ARGV=\"${EXTRA_ARGS}\"; fi;\n        exec llama-server -m \"$GGUF\"\n        --alias ${SERVED_MODEL_NAME:-qwen3.8-flash-next}\n        -lm mmap\n        -ot per_layer_token_embd=CPU\n        --n-gpu-layers 999\n        --ctx-size ${MAX_MODEL_LEN:-262144}\n        --parallel ${PARALLEL:-2}\n        $( [ \"${SPEC:-ngram-mod}\" != \"none\" ] && echo \"--spec-type ${SPEC:-ngram-mod}\" )\n        $MMFLAG\n        --temp 1.0 --top-p 0.95 --top-k 20\n        --host 0.0.0.0\n        --port ${LLAMACPP_PORT:-8000}\n        $EXTRA_ARGV\n",
+  "variables": [
+    {
+      "key": "LLAMACPP_IMAGE",
+      "label": "llama.cpp 镜像",
+      "label_en": "llama.cpp image",
+      "type": "string",
+      "source": "user",
+      "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0",
+      "picker": "image",
+      "help": "ACR 烘焙镜像（源自 0xBakeer/qwen38-flash-next-spark recipes/llamacpp-edit/Dockerfile：CUDA 13 devel 阶段构建 llama.cpp @qwen4exp PR 035e227 + runtime 精简，仅留 llama-server/llama-cli）",
+      "help_en": "ACR-baked image (from 0xBakeer/qwen38-flash-next-spark recipes/llamacpp-edit/Dockerfile: CUDA 13 devel stage builds llama.cpp @qwen4exp PR 035e227 + slim runtime with only llama-server/llama-cli)"
+    },
+    {
+      "key": "QWN38_GGUF_REPO",
+      "label": "GGUF 模型仓库",
+      "label_en": "GGUF model repo",
+      "type": "string",
+      "source": "user",
+      "default": "unsloth/Qwen3.8-Flash-Next-GGUF",
+      "required": true,
+      "picker": "model",
+      "help": "unsloth GGUF 仓库：只需 UD-Q4_K_XL/* 分片（~104GiB）+ mmproj-F16.gguf（~0.9GiB，视觉投影）分发给节点 HF 缓存；勿改低比特 K-quant 求快（UD-Q3_K_XL 反而慢 14%）",
+      "help_en": "unsloth GGUF repo: only UD-Q4_K_XL/* shards (~104 GiB) + mmproj-F16.gguf (~0.9 GiB vision projector) need to reach the node HF cache; do not drop to a lower-bit K-quant for speed (UD-Q3_K_XL is 14% slower)"
+    },
+    {
+      "key": "SERVED_MODEL_NAME",
+      "label": "对外服务名",
+      "label_en": "Served model name",
+      "type": "string",
+      "source": "user",
+      "default": "qwen3.8-flash-next"
+    },
+    {
+      "key": "LLAMACPP_PORT",
+      "label": "llama-server 端口",
+      "label_en": "llama-server port",
+      "type": "int",
+      "source": "user",
+      "default": "8000"
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "label": "上下文长度",
+      "label_en": "Context length",
+      "type": "int",
+      "source": "user",
+      "default": "262144",
+      "help": "llama.cpp 按 PARALLEL 平分：2 槽时每请求 131,072 token，超长 400（两槽下 161K token 的 prefill 会整个失败，PARALLEL=1 恢复全窗）",
+      "help_en": "llama.cpp splits CTX across slots: at PARALLEL=2 each request gets 131,072 tokens, longer returns 400 (a 161K-token prefill fails entirely at two slots; PARALLEL=1 restores the full window)"
+    },
+    {
+      "key": "PARALLEL",
+      "label": "并发槽（parallel）",
+      "label_en": "Parallel slots",
+      "type": "int",
+      "source": "user",
+      "default": "2",
+      "help": "2（默认）= 双请求各 131,072 上下文，负载下 1.24-1.30x；1 = 恢复整窗 262,144；别拉太高（64 槽会抖动 prompt cache 丢请求）",
+      "help_en": "2 (default) = two requests at 131,072 context each, 1.24-1.30x under load; 1 = restore the full 262,144 window; don't push high (64 slots thrashes the prompt cache and loses requests)"
+    },
+    {
+      "key": "SPEC",
+      "label": "投机模式",
+      "label_en": "Speculation mode",
+      "type": "select",
+      "source": "user",
+      "default": "ngram-mod",
+      "options": [
+        "ngram-mod",
+        "none"
+      ],
+      "help": "ngram-mod（默认）= 从 prompt 复制候选跨度的上下文投机（exact、输出字节一致；改文件 88 tok/s、自由文本 ~28）；none = 关闭",
+      "help_en": "ngram-mod (default) = context-copying speculation that lifts spans from your prompt (exact, byte-identical output; 88 tok/s on file rewrites, ~28 free-form); none = off"
+    },
+    {
+      "key": "MMPROJ_MODE",
+      "label": "视觉投影",
+      "label_en": "Vision projector",
+      "type": "select",
+      "source": "user",
+      "default": "auto",
+      "options": [
+        "auto",
+        "none"
+      ],
+      "help": "auto（默认）= 缓存里有 mmproj-F16.gguf 就传 --mmproj（图像 0.967）；none = 纯文本",
+      "help_en": "auto (default) = pass --mmproj when mmproj-F16.gguf is present in the cache (0.967 vision); none = text-only"
+    },
+    {
+      "key": "EXTRA_ARGS",
+      "label": "附加 llama-server 参数",
+      "label_en": "Extra llama-server args",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "追加到命令尾部的空格分隔参数（如 --gpu-layers-percent 或自定义 sampler）",
+      "help_en": "Space-separated args appended at the end of the command (e.g. sampler overrides)"
+    },
+    {
+      "key": "HF_TOKEN",
+      "label": "HuggingFace Token",
+      "label_en": "HuggingFace token",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "受 gating 的模型授权 token；模型已由管理平台分发到缓存时通常可留空",
+      "help_en": "Auth token for gated models; usually empty when the model is pre-distributed to the cache"
+    }
+  ],
+  "version": "1.0.0",
+  "nodes": 1
+}
