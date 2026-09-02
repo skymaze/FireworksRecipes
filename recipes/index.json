@@ -230,36 +230,6 @@
       "name_en": "GLM-5.2 QuantTrio DCP4"
     },
     {
-      "id": "glm-5.3-flash-nvfp4-tp4-4x",
-      "provider": "zai-org",
-      "model": "zai-org/GLM-5.3-Flash",
-      "path": "recipes/glm-5.3-flash-nvfp4-tp4-4x/fireworks.recipe.json",
-      "readme": "recipes/glm-5.3-flash-nvfp4-tp4-4x/README.md",
-      "readme_en": "recipes/glm-5.3-flash-nvfp4-tp4-4x/README.en.md",
-      "version": "1.1.0",
-      "params": "320B/18B NVFP4",
-      "context_length": 1048576,
-      "modality": "text",
-      "nodes": 4,
-      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8",
-      "tags": [
-        "gb10",
-        "glm-5.3",
-        "flash",
-        "nvfp4",
-        "fp8-kv",
-        "tp4",
-        "mtp",
-        "1m-context",
-        "glm5-next",
-        "agentic"
-      ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE，glm5_next）NVFP4 量化四节点 TP=4 服务（Lane A — fp8 KV，FlashInfer SM12x unlock；原生 MTP k=4 投机）：ACR 烘焙 sm121-v8 镜像（上游 8 层 patch 链）、fp8_e4m3 KV（24GiB/rank）、默认 RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint（compressed-tensors，修复 ModelOpt token 损坏）、1,048,576 上下文、~3.9M token KV 池、结构化解码 ~55 tok/s（实测）。注意：上游把 MTP TP4 标记为 superseded（DFlash2 更快且 KV 池成本 ~0），新部署建议直接改用 DFlash2 配方。",
-      "description_en": "4-node TP=4 serving for GLM-5.3-Flash (320B/A18B MoE, glm5_next) NVFP4 quant — Lane A fp8 KV (FlashInfer SM12x unlock) with native MTP k=4 speculation: ACR-baked sm121-v8 image (upstream 8-layer patch chain), fp8_e4m3 KV (24 GiB/rank), default RedHatAI/GLM-5.3-Flash-NVFP4 checkpoint (compressed-tensors, fixes ModelOpt token corruption), 1,048,576 context, ~3.9M-token KV pool, ~55 tok/s structured decode (measured). Note: upstream has marked MTP TP4 as superseded (DFlash2 is faster at ~zero KV-pool cost) — new deployments should use the DFlash2 recipe instead.",
-      "name": "GLM-5.3-Flash NVFP4 Lane A",
-      "name_en": "GLM-5.3-Flash NVFP4 Lane A"
-    },
-    {
       "id": "glm-5.3-flash-nvfp4-tp4-dflash2-4x",
       "provider": "zai-org",
       "model": "zai-org/GLM-5.3-Flash",
