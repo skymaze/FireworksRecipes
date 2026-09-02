@@ -326,7 +326,7 @@
       "path": "recipes/glm-5.3-flash-exl3-tp2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-exl3-tp2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-exl3-tp2-2x/README.en.md",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "params": "320B/18B EXL3 4bpw",
       "context_length": 1048576,
       "modality": "image-text-to-text",
