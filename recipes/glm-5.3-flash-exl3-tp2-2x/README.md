@@ -28,7 +28,7 @@ DFlash2 k=7 · Structured/Code 高接受档 · temp 0 · thinking off · 400 tok
 实验室（C1，median 5×400）：Structured **61.7** tok/s（0.918 accept）；Prose 26.9；长上下文（~60–100k KV）24–27；
 MTP k=2 基线 ~24.6。**2026-08-29 上游 P1 阶梯把 `MAX_NUM_BATCHED_TOKENS` pin 到 2048**（8k cold TTFT 10.36s/772 → 8.93s/895、100k 947→975、decode 无退化；3584/4096 被 LinearEXL3 胖 expert 税吃掉、已 revert；**8192 撑爆 GB10 indexer smem，永远别上**）。
 **2026-08-30 上游又把 `DFLASH_DRAFT_TP` 默认改为 2**（drafter 跨 TP 分片，实验室 structured 65.1 tok/s）；
-**镜像已按上游现行 overlay 重建（ACR `glm53-flash-exl3:v1.0.0`，@493cb88），本配方已跟随默认 2**。
+**2026-09-01 上游合并胖 expert prefill 加速（#77）：`EXL3_FAT_KERNEL=1` 默认 + `MAX_NUM_BATCHED_TOKENS` 默认 2048→**7168**（E2 内核下本机最优单发值；旧 3584/4096 被胖 expert 税吃掉是 no-fat-kernel 时代的结论），另加数值化自旋（`GLM53_SPINWAIT_MS`）与 indexer workspace 右尺寸（`GLM53_INDEXER_WORKSPACE=rightsize`，可选省 ~5 GiB KV）。上游还合并了实验性 TP4 线（`start-tp4.sh` / `.env.tp4`，4× GB10，本配方仍为 TP=2）。**镜像已按上游现行 overlay 重建（ACR `glm53-flash-exl3:v1.1.0`，@c707598），本配方已跟随默认 2**。
 上游 1M serve（util 0.87，同池 1,754,237 token / **1.75×** / 690 blocks / **18.67 GiB**）；
 KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.61 GiB）；先核对节点 `:exl3` 与上游同一构建，
 差一口气时优先把 `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` 设为 0（去掉 CUDA-graph 显存预留，
@@ -38,11 +38,12 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 ## 快速开始
 
 - 集群：恰好 **2 台**节点（head + 1 worker），CX7 直连（NCCL 不能走 10.0.0.x loopback 别名）。
-- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0`（ACR 按上游现行 Dockerfile 烘焙，
-  @493cb88 / 2026-08-31；节点不支持 pull，镜像由集群镜像仓库分发到各节点，本地已有即用）。
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0`（ACR 按上游现行 Dockerfile 烘焙，
+  @c707598 / 2026-09-01；节点不支持 pull，镜像由集群镜像仓库分发到各节点，本地已有即用）。
   若 KV 池异常偏小，先核对节点镜像是否为本 ACR tag（旧的 GHCR `:exl3` 是 2026-08-28 构建、缺 5 个运行时补丁）。
 - 模型：**主模型 + DFlash2 drafter** 由 Fireworks 以 `picker=model` 分发到各节点 HF 缓存
   （`HF_HOME=/root/.cache/huggingface`，按 repo id 离线解析）。
+- **E2 内核**：`EXL3_FAT_KERNEL=1`（默认）走镜像内构建期编译的 exl3_fat_gemm；要回退旧胖 expert 路径设 0（无需重建镜像）。
 - **NCCL**：HCA / 网卡 / GID index 由 Fireworks 自动键按节点填充。
 - 冷启动后首个请求会触发一次 JIT 编译（上游有 boot 预热钩子，Fireworks 侧无），略慢属正常；
   Triton/TileLang 缓存已挂持久卷，重建不丢。
@@ -51,18 +52,21 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `GLM53EXL3_IMAGE` | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0` | overlay 镜像（ACR 烘焙 @493cb88） |
+| `GLM53EXL3_IMAGE` | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0` | overlay 镜像（ACR 烘焙 @c707598，含 exl3_fat_gemm E2 内核） |
 | `GLM53EXL3_MODEL_PATH` | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` | **EXL3 主模型**（勿换 NVFP4） |
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter**（须分发到节点缓存） |
 | `MAX_MODEL_LEN` | `1000000` | 上游生产档 1M（勿降 256k） |
 | `GPU_MEMORY_UTILIZATION` | `0.87` | 上游实测值（池 ~18.67 GiB）；本机若 <14.61 GiB 先核对镜像构建，再调 ≥0.90 |
 | `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `1` | 0 = 去掉 CUDA-graph 显存预留还 KV ~2.6 GiB（graphs 仍开；KV 池不足时先试它） |
 | `MAX_NUM_SEQS` | `4` | decode 批（上游 pin） |
-| `MAX_NUM_BATCHED_TOKENS` | `2048` | 上游 2026-08-29 P1 keep（8k −16% TTFT、100k +3%；3584/4096 revert；**8192 撑爆 GB10 indexer smem**） |
+| `MAX_NUM_BATCHED_TOKENS` | `7168` | 上游 2026-09-01 E2 默认（`EXL3_FAT_KERNEL=1` 下本机最优单发；旧 2048 是 08-29 老内核 keep。**8192 撑爆 GB10 indexer smem，永远别上**） |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`；别用 bf16/nvfp4 |
 | `GLM53EXL3_DFLASH_TOKENS` | `7` | DFlash2 投机 token（trained block 8） |
 | `GLM53EXL3_DFLASH_DRAFT_TP` | `2` | drafter 跨 TP 分片（上游 2026-08-30 keep，structured 65.1 tok/s；镜像重建后已跟随）。1 = 只留 rank 0 |
 | `EXL3_FUSED_MOE` | `1` | 每层融合 `exl3_moe`；0 = 逐 expert 循环 |
+| `EXL3_FAT_KERNEL` | `1` | E2 fat-expert prefill 内核（v1.1.0 镜像已编译，上游 2026-09-01 默认）；0 = 旧胖 expert 路径 |
+| `GLM53_SPINWAIT_MS` | `stock` | stock = vLLM 默认 1s 自旋；数字 = 毫秒（上游数值化自旋补丁；16ms 档单流略快） |
+| `GLM53_INDEXER_WORKSPACE` | `stock` | stock（默认）/ `rightsize`（1M 下 sparse-indexer prefill workspace 右尺寸，省 ~5 GiB KV） |
 | `GLM53_MIXED_PREFILL_CHUNK` | `skip` | decode 步不混入 peer prefill（上游 pin） |
 | `GLM53_SUPPRESS_STOPS_IN_REASONING` | `1` | thinking 内客户端 stop 保持休眠 |
 | `LANGUAGE_MODEL_ONLY` | `0` | 0=加载视觉塔；1=仅文本（更快） |
@@ -88,11 +92,13 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 - 冷启动慢，健康检查 start_period 900s；CUDA graphs 已开，勿 `--enforce-eager`。
 - 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`、xgrammar 投机解码终止修复等），
   与上游 start.sh 一致；补丁一律 `if [ -f ]` 哨兵执行，缺文件自动跳过。
-- **镜像侧记录（2026-09-01 ACR 重建）**：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0`
-  按上游现行 Dockerfile 烘焙（`@493cb88` / 2026-08-31，digest `sha256:190f248a…`），五个运行时补丁
+- **镜像侧记录（2026-09-02 ACR 重建）**：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0`
+  按上游现行 Dockerfile 烘焙（`@c707598` / 2026-09-01，digest `sha256:06035a0d…`），运行时补丁
   `suppress_stops_in_reasoning` / `scheduler_decode_floor` / `hybrid_prefix_hit` / `xgrammar_termination` /
-  `kpool_tail_slotmap` 全部入镜像并在构建期跑了自检（每个 `ok`）；exllamav3_ext 以 `sm_121a` cubins 编译。
-  GHCR 旧 `:exl3`（2026-08-28 07:46Z 构建）仍缺这五项，勿再作为部署镜像。
+  `kpool_tail_slotmap` / `spinwait` / `indexer_workspace` 全部入镜像并在构建期跑了自检（每个 `ok`）；
+  **exl3_fat_gemm（E2 内核）构建期编译进 exllamav3_ext**（构建断言 `exl3_fat_gemm`/`exl3_fat_gemm_scatter`
+  存在）；exllamav3_ext 以 `sm_121a` cubins 编译。旧 ACR `:v1.0.0`（@493cb88）与 GHCR `:exl3`
+  （2026-08-28 07:46Z 构建）都缺 E2 内核 + spinwait/indexer 补丁，勿再作为部署镜像。
 - **KV per-token 自检**：正常部署每 token 目标 KV ≈ 9.3 KB（fp8_ds_mla 656 B/token/层 × 11 DSA 层 + 草稿 ~2 KB），
   1M 约需 9–12 GiB。若 boot 报错按 786,432 token 需要 16.34 GiB 这类量级（≈22.3 KB/token）反推，
   说明部署的镜像/`--kv-cache-dtype fp8` 没生效（或走了 bf16/旧版镜像），先按上面核对镜像再调 util。
@@ -104,7 +110,9 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
   参数级参考（.env / start.sh / overlay / Dockerfile；2026-08-29：1M 上下文 + padded slot-share + hybrid prefix hit +
   MNBT=2048 P1 keep；2026-08-30：`DFLASH_DRAFT_TP=2` keep + kpool-tail slotmap 修复（`overlay/patch_kpool_tail_slotmap.py`，
   长生成时通用 paged kernel 会越过 tail group 单 block-table 条目、可崩溃或静默损坏 indexer——修复 pin 在单 block 环形 scratch，
-  随下次镜像烘焙生效）+ per-rank GID（与我们按节点 gid_index 自动键同思路））
+  随镜像烘焙生效）+ per-rank GID（与我们按节点 gid_index 自动键同思路）；2026-09-01：`EXL3_FAT_KERNEL=1` + MNBT=7168
+  （#77 E2 fat-expert prefill 内核，构建期编译）+ spinwait 数值化（#96）+ indexer workspace 右尺寸（#86，`rightsize`
+  省 ~5 GiB KV）+ 实验性 TP4 线（#105，4× GB10，本配方仍 TP=2））
 - [Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw](https://huggingface.co/Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw)：
   EXL3/TR3 4bpw 权重镜像（ShapleyMCG License 1.0）· [原始权重](https://huggingface.co/brandonmusic/GLM-5.3-Flash-tr3-4bpw)
 - [incoai/GLM-5.3-Flash-DFlash2](https://huggingface.co/incoai/GLM-5.3-Flash-DFlash2)：DFlash2 草稿（CC BY-NC-ND 4.0）

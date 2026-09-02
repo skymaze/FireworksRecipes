@@ -3,7 +3,7 @@
 Serve DeepSeek-V4-Flash-**Vision-Exp** with Fireworks on **exactly 2** DGX Spark
 nodes (head + 1 worker, RoCE):
 
-- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4`
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5`
   (Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` baked with the **full Mia
   fail-closed hotfix chain + Vision-Exp native image support**, applied at
   startup before `vllm serve`)
@@ -40,8 +40,8 @@ Before publishing:
 - Model: `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` distributed to nodes
   (incl. `encoding/encoding_dsv4.py`; the Vision-Exp ViT+Aligner weights take
   more VRAM than 0731, shrinking the KV pool).
-- Image: ACR hotfix image `v0.1.1-hotfix4` (upstream snapshot `de230b45…`,
-  2026-08-31) pullable.
+- Image: ACR hotfix image `v0.1.1-hotfix5` (upstream snapshot `d97c808ec…`,
+  2026-09-01) pullable.
 
 > Node count is locked to **exactly 2**; TP/distributed knobs are tuned for it.
 
@@ -59,7 +59,7 @@ curl -s http://<head-ip>:8888/v1/chat/completions \
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix4` | Mia hotfix-baked image (incl. Vision-Exp image support) |
+| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix5` | Mia hotfix-baked image (incl. Vision-Exp image support) |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` | Downloaded model |
 | `DSPARK_REVISION` | empty | Empty = auto-resolve local snapshot sha (offline-safe); upstream pin is `86f746b3…` |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-vision-exp` | Served model name |
@@ -109,7 +109,7 @@ Upstream measured on the Anemll 1M/6 tier (results/RESULTS-2026-08-14.md):
 | **Six short chats** (hundreds of tokens) | **~160-190 tok/s aggregate** (~30-37 per stream) |
 | Six cold 32K-128K prompts at once | Prefills queue (#27), ~8 tok/s decode floor |
 
-## Hotfix chain (v1.0.0 · snapshot de230b45bc49…, 2026-08-31)
+## Hotfix chain (v1.5.0 · snapshot d97c808ec1c…, 2026-09-01)
 
 Applied on every container start in fail-closed order:
 
@@ -119,6 +119,13 @@ Applied on every container start in fail-closed order:
   `ffn.gate.bias_vl` remap), register the multimodal processor, restrict images
   to `user` messages (#165 fix: system/assistant messages that merely *mention*
   `<image>` are no longer rejected).
+- **New in hotfix5 (the three upstream 2026-08-31→09-01 vision fixes, all
+  unconditional fail-closed)**: #168 treats RGB with width 1/3/4 as
+  channels-first (fixes square / single-column images fed as CHW); #176 salts
+  the encoder cache with the image block length (placeholder / block-length
+  mismatch from issue #172, which could crash); #179 routes image placeholder
+  rows through `bias_vl` and skips the hash table (issue #175) — text rows keep
+  `e_score_correction_bias` + `tid2eid`, unchanged.
 - **Encoding hotfix** (#52 reasoning-effort mapping + #21): patches after
   copying `encoding_dsv4.py` from the HF snapshot (missing file warns, doesn't fail).
 - **Python**: #55 tool-call truncation, #109 empty encoder output, #27 partial-
@@ -146,6 +153,17 @@ Applied on every container start in fail-closed order:
 > without the checkpoint encoding. **The checkpoint distribution still needs
 > hardware validation** — confirm the Model page has distributed
 > `DeepSeek-V4-Flash-Vision-Exp` to both nodes before publishing.
+>
+> **2026-09-01 upstream sync (v1.1.0 → hotfix5)**: `v0.1.1-hotfix5` is baked and
+> pushed to ACR (snapshot `d97c808ec1c…`, 2026-09-01, digest `sha256:6c2c76f7…`,
+> single-arch arm64). Vs hotfix4 the patch tree moved exactly 4 files forward
+> (SHA-verified byte-identical to the upstream tree): vision_exp/apply.py +
+> image_processor.py + processor.py + hotfix-dsv4-vision-exp.py (docstring),
+> i.e. the #168/#176/#179 fixes above; the other 27 patches and all entrypoint
+> behavior are unchanged. The upstream #177/#180 merged alongside (worker
+> weights served from the head over NFS) are launcher/NFS-host-side features,
+> not part of the image patch tree — this recipe stays on the HF-cache offline
+> path and does not need them.
 
 Triton / TileLang / B12X-CuTeDSL JIT compile caches are persisted to the HF
 volume (container reinstantiation doesn't re-JIT and TP stays in sync).
@@ -174,8 +192,8 @@ volume (container reinstantiation doesn't re-JIT and TP stays in sync).
   verify rows (6×7); the engine may clamp CUDA-graph capture rows to ~32. Read
   upstream #141 evidence and the #151 opt-in workaround before raising it.
 - Exactly 2 nodes (TP=2) only; other topologies need another recipe.
-- **Dev-branch recipe**: v1.0.0 depends on the `v0.1.1-hotfix4` image (pushed to
-  ACR on 2026-09-01) and the `DeepSeek-V4-Flash-Vision-Exp` checkpoint
+- **Dev-branch recipe**: v1.1.0 depends on the `v0.1.1-hotfix5` image (pushed to
+  ACR on 2026-09-02) and the `DeepSeek-V4-Flash-Vision-Exp` checkpoint
   distribution (**not hardware-validated yet**); confirm the Model page has
   distributed the checkpoint to both nodes before publishing.
 
@@ -184,7 +202,7 @@ volume (container reinstantiation doesn't re-JIT and TP stays in sync).
 Full attribution in root `NOTICE.md`:
 
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)
-  (vision-exp · snapshot `de230b45bc49…`, 2026-08-31)
+  (vision-exp · snapshot `d97c808ec1c…`, 2026-09-01)
 - [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10)
 - [vllm-project/vllm](https://github.com/vllm-project/vllm)
 - [lukealonso/b12x](https://github.com/lukealonso/b12x)

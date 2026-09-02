@@ -37,12 +37,12 @@
       "path": "recipes/deepseek-v4-flash-vision-exp-dspark/fireworks.recipe.json",
       "readme": "recipes/deepseek-v4-flash-vision-exp-dspark/README.md",
       "readme_en": "recipes/deepseek-v4-flash-vision-exp-dspark/README.en.md",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "params": "305B（含 ViT/Aligner）",
       "context_length": 1048576,
       "modality": "image-text-to-text",
       "nodes": 2,
-      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4",
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5",
       "tags": [
         "gb10",
         "dspark",
@@ -53,8 +53,8 @@
         "1m-context",
         "mia-hotfix"
       ],
-      "description": "DeepSeek-V4-Flash-Vision-Exp 双节点 TP=2 DSpark 服务：Anemll 分发镜像、原生图片输入（ViT+Aligner 启动热修复，OpenAI image_url ≤8 张/仅 user 消息/无视频）、FlashInfer b12x + dspark 投机 k=6、NVFP4 DS-MLA、1M 上下文。",
-      "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash-Vision-Exp: Anemll distribution image, native image input (ViT+Aligner startup hotfix, OpenAI image_url up to 8/user messages only/no video), FlashInfer b12x + dspark speculation k=6, NVFP4 DS-MLA, 1M context.",
+      "description": "DeepSeek-V4-Flash-Vision-Exp 双节点 TP=2 DSpark 服务：Anemll 分发镜像、原生图片输入（ViT+Aligner 启动热修复，含上游 #168/#176/#179 vision 修复，OpenAI image_url ≤8 张/仅 user 消息/无视频）、FlashInfer b12x + dspark 投机 k=6、NVFP4 DS-MLA、1M 上下文。",
+      "description_en": "2-node TP=2 DSpark serving for DeepSeek-V4-Flash-Vision-Exp: Anemll distribution image, native image input (ViT+Aligner startup hotfix, incl. upstream vision fixes #168/#176/#179, OpenAI image_url up to 8/user messages only/no video), FlashInfer b12x + dspark speculation k=6, NVFP4 DS-MLA, 1M context.",
       "name": "DeepSeek-V4-Flash-Vision-Exp MiaAI-Lab",
       "name_en": "DeepSeek-V4-Flash-Vision-Exp MiaAI-Lab"
     },
@@ -326,12 +326,12 @@
       "path": "recipes/glm-5.3-flash-exl3-tp2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-exl3-tp2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-exl3-tp2-2x/README.en.md",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "params": "320B/18B EXL3 4bpw",
       "context_length": 1048576,
       "modality": "image-text-to-text",
       "nodes": 2,
-      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.0.0",
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0",
       "tags": [
         "gb10",
         "glm-5.3",
@@ -346,8 +346,8 @@
         "multimodal",
         "miaai-lab"
       ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机（drafter 跨 TP 分片）、MNBT 2048（上游 2026-08-29 P1 keep，冷 prefill +3–16%）、1M 上下文（padded slot-share）、Vision 默认开——ACR 烘焙镜像（上游现行 Dockerfile @493cb88，5 个运行时补丁全量入镜像）；decode 单流 62.9 tok/s（×2 聚合 103.3 / ×4 聚合 146.5）。",
-      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation (drafter sharded across TP), MNBT 2048 (upstream 2026-08-29 P1 keep, +3-16% cold prefill), 1M context (padded slot-share), Vision on by default — ACR-baked image (upstream current Dockerfile @493cb88, all five runtime patches baked in); 62.9 tok/s single-stream (x2 aggregate 103.3 / x4 aggregate 146.5).",
+      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机（drafter 跨 TP 分片）、EXL3_FAT_KERNEL=1（E2 内核）+ MNBT 7168（上游 2026-09-01 E2 默认）、1M 上下文（padded slot-share）、Vision 默认开——ACR 烘焙镜像（上游现行 Dockerfile @c707598，E2 内核 + 7 个运行时补丁全量入镜像）；decode 单流 62.9 tok/s（×2 聚合 103.3 / ×4 聚合 146.5）。",
+      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation (drafter sharded across TP), EXL3_FAT_KERNEL=1 (E2 kernel) with MNBT 7168 (upstream 2026-09-01 E2 default), 1M context (padded slot-share), Vision on by default — ACR-baked image (upstream current Dockerfile @c707598, E2 kernel + all seven runtime patches baked in); 62.9 tok/s single-stream (x2 aggregate 103.3 / x4 aggregate 146.5).",
       "name": "GLM-5.3-Flash EXL3 TP=2",
       "name_en": "GLM-5.3-Flash EXL3 TP=2"
     }

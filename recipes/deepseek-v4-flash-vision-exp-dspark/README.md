@@ -3,7 +3,7 @@
 用 Fireworks 在 **恰好 2 台** DGX Spark（head + 1 worker，RoCE 组网）上跑起
 DeepSeek-V4-Flash-**Vision-Exp**：
 
-- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4`
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5`
   （在 Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` 上烘焙了 **Mia 完整 fail-closed
   热修复链 + Vision-Exp 原生图片支持**，启动时应用到 `vllm serve` 前）
 - 拓扑：**固定 2 节点 · TP=2**，FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · 1M 上下文
@@ -32,7 +32,7 @@ DeepSeek-V4-Flash-**Vision-Exp**：
 - 模型：`deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` 已分发到节点（含
   `encoding/encoding_dsv4.py`；Vision-Exp 的 ViT+Aligner 权重比 0731 更占显存，
   KV 池相应变小）。
-- 镜像：ACR 热修复镜像 `v0.1.1-hotfix4`（上游快照 `de230b45…`，2026-08-31）已可拉取。
+- 镜像：ACR 热修复镜像 `v0.1.1-hotfix5`（上游快照 `d97c808ec…`，2026-09-01）已可拉取。
 
 > 节点数锁定为**恰好 2**，TP/分布式参数按此调优。
 
@@ -50,7 +50,7 @@ curl -s http://<head-ip>:8888/v1/chat/completions \
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix4` | Mia 热修复烘焙镜像（含 Vision-Exp 图片支持） |
+| `DSPARK_VLLM_IMAGE` | `…/dspark-vllm-gx10-mia:v0.1.1-hotfix5` | Mia 热修复烘焙镜像（含 Vision-Exp 图片支持） |
 | `DSPARK_MODEL` | `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` | 已下载模型 |
 | `DSPARK_REVISION` | 空 | 留空=自动用本地缓存快照 sha（离线安全）；上游官方 pin 为 `86f746b3…` |
 | `SERVED_MODEL_NAME` | `deepseek-v4-flash-vision-exp` | 对外服务名 |
@@ -98,7 +98,7 @@ Maximum concurrency for 1,048,576 tokens per request: 2.22x
 | **六路短聊天**（数百 token） | **~160–190 tok/s 聚合**（~30–37/路） |
 | 六路冷 32K–128K 同时 prefill | 排队（#27），decode ~8 tok/s 保底 |
 
-## 内置热修复链（v1.4.0 · 快照 de230b45bc49…，2026-08-31）
+## 内置热修复链（v1.5.0 · 快照 d97c808ec1c…，2026-09-01）
 
 镜像在每次启动时按 fail-closed 顺序应用：
 
@@ -106,6 +106,11 @@ Maximum concurrency for 1,048,576 tokens per request: 2.22x
   无条件 fail-closed）：构建 ViT+Aligner 图片塔、映射 `vision.*`/`aligner.*`/
   `bias_vl` 权重（含 MoE 0–2 层 `ffn.gate.bias_vl` remap）、注册多模态 processor、
   图片仅限 user 消息（#165 修复：system/assistant **文本提及** `<image>` 标签不再误判）。
+- **hotfix5 新增（上游 2026-08-31→09-01 三个 vision 修复，全部无条件 fail-closed）**：
+  #168 图片按 CHW channels-first 判定（宽 1/3/4 的 RGB 一律按通道优先，修方形/单列图）、
+  #176 encoder 缓存按图片 block 长度加盐（占位符与图像块长度失配，issue #172 连锁崩溃）、
+  #179 图片 placeholder 行走 `bias_vl` 路由并跳过 hash 表（issue #175；文本行走原
+  `e_score_correction_bias` + `tid2eid` 不变）。
 - **编码热修复**（#52 reasoning-effort 映射 + #21）：从 HF 快照拷贝
   `encoding_dsv4.py` 后打补丁（缺文件只告警不失败）。
 - **Python**：#55 tool-call 截断、#109 空 encoder 输出、#27 partial-prefill 并发、
@@ -129,6 +134,14 @@ Maximum concurrency for 1,048,576 tokens per request: 2.22x
 > `--limit-mm-per-prompt {"image":N}` 转换与 `MTP=42` capture 尺寸正确、
 > 缺 checkpoint encoding 时 fail-closed 拒启。**checkpoint 分发仍需实机验证**，
 > 发布前请确认「模型页」已分发 `DeepSeek-V4-Flash-Vision-Exp` 到两节点。
+>
+> **2026-09-01 上游同步（v1.1.0 → hotfix5）**：`v0.1.1-hotfix5` 已烘焙推送 ACR
+> （快照 `d97c808ec1c…`，2026-09-01，digest `sha256:6c2c76f7…`，单架构 arm64）。相对
+> hotfix4，补丁树仅 4 个文件前移（sha256 逐字节对齐上游 tree）：vision_exp/apply.py +
+> image_processor.py + processor.py + hotfix-dsv4-vision-exp.py（注释），内容即上节
+> #168/#176/#179 三个 vision 修复；其余 27 个补丁与入口脚本行为不变。上游同期合并的
+> #177/#180（worker 权重从 head 走 NFS 分发）为启动脚本/NFS 主机侧特性，不入镜像补丁树，
+> 本配方仍走 HF 缓存离线路径，无需引入。
 
 同时持久化 Triton / TileLang / B12X-CuTeDSL JIT 编译缓存到 HF 卷（容器重建不重复
 JIT，避免 TP 失同步）。
@@ -153,7 +166,7 @@ JIT，避免 TP 失同步）。
   N=6/k=6 的 verify 行数为 42（6×7），引擎可能把 CUDA graph 捕获行数钳到 ~32；
   提高并发前请先读上游 #141 证据与 #151 的 opt-in workaround。
 - 仅支持恰好 2 节点（TP=2）；其他拓扑请选对应配方或自建。
-- **dev 分支配方**：v1.0.0 依赖 `v0.1.1-hotfix4` 镜像（已推送 ACR，2026-09-01）与
+- **dev 分支配方**：v1.1.0 依赖 `v0.1.1-hotfix5` 镜像（已推送 ACR，2026-09-02）与
   `DeepSeek-V4-Flash-Vision-Exp` checkpoint 分发（**未实机验证**）；发布前请确认
   「模型页」已把 checkpoint 分发到两节点。
 
@@ -162,7 +175,7 @@ JIT，避免 TP 失同步）。
 完整来源见仓库根 `NOTICE.md`：
 
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)
-  （vision-exp · 快照 `de230b45bc49…`，2026-08-31）
+  （vision-exp · 快照 `d97c808ec1c…`，2026-09-01）
 - [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10)
 - [vllm-project/vllm](https://github.com/vllm-project/vllm)
 - [lukealonso/b12x](https://github.com/lukealonso/b12x)

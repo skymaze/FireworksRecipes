@@ -14,7 +14,7 @@
 | 配方 | 镜像 | 说明 |
 |---|---|---|
 | DeepSeek-V4-Flash (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix2` | 双节点 TP=2 DSpark 服务 · FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文 |
-| [DeepSeek-V4-Flash-Vision-Exp (DSpark)](recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix4` | **双节点 TP=2**（多模态）· **原生图片输入**（OpenAI image_url ≤8 张 / 仅 user 消息 / 无视频）· FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · **1M 上下文**（dev：镜像已烘焙，checkpoint 待实机验证） |
+| [DeepSeek-V4-Flash-Vision-Exp (DSpark)](recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5` | **双节点 TP=2**（多模态）· **原生图片输入**（OpenAI image_url ≤8 张 / 仅 user 消息 / 无视频 · 含上游 #168/#176/#179 vision 修复）· FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · **1M 上下文**（dev：镜像已烘焙 hotfix5，checkpoint 待实机验证） |
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
 | Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **单节点** SGLang 服务 · flashinfer + DSPARK 投机（mamba 草稿）· **FP8 KV** · `--mamba-full-memory-ratio 11.01`（疑似笔误，待验证） |
@@ -24,7 +24,7 @@
 | GLM-5.3-Flash (Lane A) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v8` | **四节点 TP=4** · **fp8 KV**（FlashInfer SM12x unlock）· MTP k=4 · **1M 上下文** · ~55 tok/s 结构化解码 · NVFP4 量化（默认 RedHatAI compressed-tensors，可换 uncensored drop-in）· ⚠️ 上游已标 MTP TP4 superseded，新部署用 DFlash2 |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **双节点 TP=2** · fp8 KV + **DFlash2**（incoai drafter）· **262K 上下文** · 单流 46.9 tok/s · C1–C6 零失败（上游 one-to-copy 档）· KV profiler 定池（581K，勿 pin）· 默认 RedHatAI checkpoint |
 | GLM-5.3-Flash (DFlash2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **四节点 TP=4**（上游当前默认）· fp8 KV + **DFlash2** k=7 块扩散投机（incoai drafter，KV 池成本 ~0）· **1M 上下文** · **3.9M-token KV 池**（24 GiB/rank，需无条件 flusher）· 单流 54.5 tok/s · 默认 RedHatAI checkpoint |
-| GLM-5.3-Flash (EXL3 TP=2) | `ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3` | **双节点 TP=2** · **EXL3/TR3 4bpw 权重**（Mia-AiLab 镜像，KLD≈官方 FP8）× fp8 KV + **DFlash2** k=7 · **1M 上下文**（padded slot-share）· Vision 默认开 · 单流 62.9 tok/s（×4 聚合 146.5） |
+| GLM-5.3-Flash (EXL3 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0` | **双节点 TP=2** · **EXL3/TR3 4bpw 权重**（Mia-AiLab 镜像，KLD≈官方 FP8）× fp8 KV + **DFlash2** k=7 · **E2 fat-expert 内核**（EXL3_FAT_KERNEL=1）+ MNBT 7168 · **1M 上下文**（padded slot-share）· Vision 默认开 · 单流 62.9 tok/s（×4 聚合 146.5） |
 
 > **拓扑固定**：每条配方声明**确切的节点数**（如 2 节点 · TP=2 或 4 节点 · TP=4）；
 > Fireworks 发布时必须恰好匹配，模型参数按该拓扑调优。不同拓扑请选用对应配方。
