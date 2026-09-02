@@ -26,27 +26,39 @@ coding agents that rewrite files you hand them, at the **full 262,144-token cont
 > [`qwen38-flash-next-vllm`](../qwen38-flash-next-vllm/README.en.md) recipe (steadier, ~5x
 > faster prefill). They share the GPU — only one runs at a time.
 
-## Image (must be done before publish)
+## Image (baked & pushed to ACR)
 
-The image is baked from the upstream `recipes/llamacpp-edit/Dockerfile` (CUDA 13 devel stage
-builds llama.cpp @qwen4exp PR `035e227` + a slim runtime) and pushed to
-`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0` so Fireworks can
-pull and distribute:
+Baked and pushed:
+`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0`
+(llama.cpp @qwen4exp PR `035e227`; ACR digest `sha256:0147ea29…`). Two bake-time fixes over the
+upstream `recipes/llamacpp-edit/Dockerfile` (both in the image label
+`de.qwen38fn.bake-note`):
 
+1. **`-DGGML_CUDA_NO_VMM=ON`**: with no libcuda to link in the container, the default VMM path
+   fails at the llama-server link (`undefined reference to cuMem*` — the CUDA driver symbols).
+   VMM off uses cudaMalloc instead (functionally equivalent); the real driver is mounted from
+   the DGX Spark host under `--gpus all` at runtime.
+2. **Copy the whole `build/bin` + `LD_LIBRARY_PATH`**: upstream copies only
+   `llama-server`/`llama-cli`, but current llama.cpp splits the server into
+   `libllama-server-impl.so` etc. — the runtime container then dies with
+   `error while loading shared libraries`.
+
+Verified: `ldd` shows no missing libs, `llama-server --version` launches (the CUDA-init error
+only appears because the verification container had no `--gpus all`, which is expected).
+
+> Build/push cheat-sheet (this machine's Docker Desktop containerd store produces manifests ACR
+> rejects, so pushes go through skopeo from a `docker-archive` tar):
+>
 > ```bash
 > cd <upstream 0xBakeer/qwen38-flash-next-spark clone>
-> docker build -t registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0 \
+> docker build -t qwen38-flash-next-edit:v1.0.0 \
 >   --label "de.qwen38fn.llamacpp-ref=pinned@035e227" \
->   -f recipes/llamacpp-edit/Dockerfile .
-> docker push registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0
+>   --label "de.qwen38fn.bake-note=GGML_CUDA_NO_VMM=ON + full bin copy (driverless bake fixes)" \
+>   -f <this repo edit-bake/Dockerfile> .
+> docker save qwen38-flash-next-edit:v1.0.0 -o edit-image.tar
+> skopeo copy docker-archive:edit-image.tar \
+>   docker://registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0
 > ```
-
-> **Build status (attempted 2026-09):** both CUDA base layers are fully in the local Docker
-> cache (the build previously advanced into the runtime apt stage), but this machine's network
-> cannot currently complete — Docker Hub direct is timing out (IPv6) and Docker Desktop carries
-> a stale static proxy `127.0.0.1:1082` (pointing at a stopped Clash client) that breaks the
-> mirror fallback. **The image is not baked/pushed yet.** Once the network is back, continue
-> with the commands above (bases are cached, so it will jump straight into the llama.cpp build).
 
 ## Quick start
 

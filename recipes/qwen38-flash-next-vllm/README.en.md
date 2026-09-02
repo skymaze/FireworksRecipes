@@ -25,32 +25,30 @@ Serve **Qwen3.8-Flash-Next** (176.9B params) through vLLM on **one** DGX Spark (
 > rewriting whole files, slower on free-form text, no MTP). They share the GPU — only one runs
 > at a time.
 
-## Image (must be done before publish)
+## Image (baked & pushed to ACR)
 
-Upstream `blazux/qwen3.8-Flash-DGX` (Apache-2.0) does **not publish a prebuilt image**: its
-`setup.sh` runs a local `docker build` (base `vllm/vllm-openai:qwen38-flash-next@sha256:fc120e…`
-plus 7 patches, of which the PLE-mmap patch is what makes this recipe possible). Following this
-repo's convention, bake that image and push it to
-`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0` so Fireworks can pull
-and distribute.
+Baked from upstream [blazux/qwen3.8-Flash-DGX](https://github.com/blazux/qwen3.8-Flash-DGX)
+(Apache-2.0) and pushed:
+`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0`
+(upstream commit `209646c`, stamped in the image labels; ACR digest `sha256:28943bf4…`).
+Base `vllm/vllm-openai:qwen38-flash-next@sha256:fc120e…` + the 7 patches (the PLE-mmap hook is
+what makes this recipe possible; verified present in `ple_layer.py`, mamba/FLA patches in place,
+`import vllm` succeeds).
 
-> Bake & push commands (upstream already cloned at `blazux/qwen3.8-Flash-DGX@209646c`):
+> Build/push cheat-sheet (note: manifests produced by this machine's Docker Desktop containerd
+> store are rejected by ACR with `application/vnd.oci.empty.v1+json`, so we push through skopeo
+> from a `docker-archive` tar, which re-encodes the manifest):
 >
 > ```bash
 > cd blazux/qwen3.8-Flash-DGX
-> docker build -t registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0 \
+> docker build -t qwen38-flash-next:v1.0.0 \
 >   --label "de.qwen38fn.upstream-repo=https://github.com/blazux/qwen3.8-Flash-DGX.git" \
 >   --label "de.qwen38fn.upstream-ref=209646c" \
 >   --label "de.qwen38fn.upstream-sha=209646c" .
-> docker push registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0
+> docker save qwen38-flash-next:v1.0.0 -o vllm-image.tar
+> skopeo copy docker-archive:vllm-image.tar \
+>   docker://registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0
 > ```
->
-> **Build status (attempted 2026-09):** most base layers are already in the local Docker cache,
-> but the build is blocked by this machine's network — Docker Hub direct is timing out (IPv6)
-> and Docker Desktop carries a stale static proxy `127.0.0.1:1082` (pointing at a stopped Clash
-> client) that breaks the daocloud fallback. **The image is not baked/pushed yet.** Once the
-> network is back (local proxy / Clash app running, or Docker Hub reachable), continue with the
-> commands above. The in-image upstream commit label is pinned to `209646c` for reproducibility.
 
 ## Main variables
 

@@ -166,8 +166,8 @@
         "262k-context",
         "multimodal"
       ],
-      "description": "Qwen3.8-Flash-Next（176.9B，51.2B n-gram/PLE 查找表由 NVMe 流式加载）单节点 vLLM 服务：RadixArk NVFP4 checkpoint、MTP 训练草稿头 k=3 投机、PIECEWISE CUDA-graph（PLE 查表为 split op）、前缀缓存默认开、262,144 原生上下文、多模态 0.967；~32 tok/s、prefill ~2,030-2,460 tok/s（源自 0xBakeer longctx 路线，dev：镜像待烘焙）。",
-      "description_en": "Single-node vLLM serving for Qwen3.8-Flash-Next (176.9B, 51.2B n-gram/PLE lookup table streamed from NVMe): RadixArk NVFP4 checkpoint, MTP trained-draft k=3 speculation, PIECEWISE CUDA-graph (PLE gather as a splitting op), prefix caching on by default, full 262,144 native context, multimodal 0.967; ~32 tok/s, prefill ~2,030-2,460 tok/s (from the 0xBakeer longctx lane, dev: image to be baked).",
+      "description": "Qwen3.8-Flash-Next（176.9B，51.2B n-gram/PLE 查找表由 NVMe 流式加载）单节点 vLLM 服务：RadixArk NVFP4 checkpoint、MTP 训练草稿头 k=3 投机、PIECEWISE CUDA-graph（PLE 查表为 split op）、前缀缓存默认开、262,144 原生上下文、多模态 0.967；~32 tok/s、prefill ~2,030-2,460 tok/s（源自 0xBakeer longctx 路线，dev：镜像已烘焙推送 @209646c）。",
+      "description_en": "Single-node vLLM serving for Qwen3.8-Flash-Next (176.9B, 51.2B n-gram/PLE lookup table streamed from NVMe): RadixArk NVFP4 checkpoint, MTP trained-draft k=3 speculation, PIECEWISE CUDA-graph (PLE gather as a splitting op), prefix caching on by default, full 262,144 native context, multimodal 0.967; ~32 tok/s, prefill ~2,030-2,460 tok/s (from the 0xBakeer longctx lane, dev: image baked & pushed @209646c).",
       "name": "Qwen3.8-Flash-Next（单节点 vLLM）",
       "name_en": "Qwen3.8-Flash-Next (single-node vLLM)"
     },

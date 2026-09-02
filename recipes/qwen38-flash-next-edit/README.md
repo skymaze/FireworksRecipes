@@ -22,25 +22,35 @@
 > [`qwen38-flash-next-vllm`](../qwen38-flash-next-vllm/README.md) 配方（更稳定、prefill 快
 > 5 倍）。两条路线共用 GPU，同一时刻只跑一个。
 
-## 镜像（发布前必须完成）
+## 镜像（已烘焙并推送 ACR）
 
-镜像由本仓库烘焙并推送到
-`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0` 后，Fireworks
-才能拉取分发。烘焙来源 = 上游 `recipes/llamacpp-edit/Dockerfile`（CUDA 13 devel 阶段构建
-llama.cpp @qwen4exp PR `035e227` + runtime 精简）：
+镜像已烘焙并推送：`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0`
+（llama.cpp @qwen4exp PR `035e227`，ACR digest `sha256:0147ea29…`）。相对上游
+`recipes/llamacpp-edit/Dockerfile` 有两处烘焙期修复（均写入镜像 label `de.qwen38fn.bake-note`）：
 
+1. **`-DGGML_CUDA_NO_VMM=ON`**：容器内无 libcuda 可链，原默认 VMM 路线在链接 llama-server
+   时缺 `CUDA::cuda_driver`（`undefined reference to cuMem*` 一族的符号）。关闭 VMM 后走
+   cudaMalloc，功能等价；运行时驱动由 DGX Spark 宿主在 `--gpus all` 时挂入。
+2. **拷贝整个 `build/bin` + `LD_LIBRARY_PATH`**：上游只拷 `llama-server`/`llama-cli`，新版
+   llama.cpp 的 `libllama-server-impl.so` 等共享库会缺，容器内直接
+   `error while loading shared libraries`。
+
+已验证：`ldd` 无缺库、`llama-server --version` 可启动（CUDA 初始化报错仅因验证容器未挂
+`--gpus all`，属预期）。
+
+> 构建/推送命令备忘（本机 Docker Desktop containerd 存储产出的 manifest 会被 ACR 拒绝，
+> 用 skopeo 从 `docker-archive` 重新编码推送）：
+>
 > ```bash
 > cd <上游 0xBakeer/qwen38-flash-next-spark 克隆>
-> docker build -t registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0 \
+> docker build -t qwen38-flash-next-edit:v1.0.0 \
 >   --label "de.qwen38fn.llamacpp-ref=pinned@035e227" \
->   -f recipes/llamacpp-edit/Dockerfile .
-> docker push registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0
+>   --label "de.qwen38fn.bake-note=GGML_CUDA_NO_VMM=ON + full bin copy (driverless bake fixes)" \
+>   -f <本仓库 edit-bake/Dockerfile> .
+> docker save qwen38-flash-next-edit:v1.0.0 -o edit-image.tar
+> skopeo copy docker-archive:edit-image.tar \
+>   docker://registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0
 > ```
-
-> **构建状态（2026-09 尝试）：** 两个 CUDA 基座层已全部下载至本地 Docker 缓存（构建曾推进到
-> runtime apt 阶段），但本机网络当前无法完成——Docker Hub 直连 IPv6 超时、Docker Desktop
-> 残留静态代理 `127.0.0.1:1082`（指向已停用的 Clash 客户端）使镜像兜底失败。**镜像尚未
-> 烘焙/推送**；网络恢复后按上面命令继续即可（基座层已缓存，将直接进入 llama.cpp 编译）。
 
 ## 快速使用
 

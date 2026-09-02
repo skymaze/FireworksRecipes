@@ -21,30 +21,28 @@
 > [`qwen38-flash-next-edit`](../qwen38-flash-next-edit/README.md)（编码 agent 改写文件更快，
 > 但自由文本更慢、无 MTP）。两条路线共用 GPU，同一时刻只跑一个。
 
-## 镜像（发布前必须完成）
+## 镜像（已烘焙并推送 ACR）
 
-上游 `blazux/qwen3.8-Flash-DGX`（Apache-2.0）**不发布现成镜像**：其 `setup.sh` 在本地
-`docker build`（基底 `vllm/vllm-openai:qwen38-flash-next@sha256:fc120e…`，叠加 7 个补丁，
-其中 PLE-mmap 补丁是本配方成立的前提）。按本仓库惯例，把该镜像烘焙并推送到
-`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0` 后，Fireworks
-才能拉取分发。
+镜像已按上游 [blazux/qwen3.8-Flash-DGX](https://github.com/blazux/qwen3.8-Flash-DGX)
+（Apache-2.0）`Dockerfile` 烘焙并推送：
+`registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0`
+（上流 commit `209646c`，进度仓库已烘焙入镜像 label；ACR digest `sha256:28943bf4…`）。
+基底 `vllm/vllm-openai:qwen38-flash-next@sha256:fc120e…` + 7 个补丁（PLE-mmap 是本配方成立
+的前提，已验证 hook 在 `ple_layer.py` 内、mamba/FLA 补丁在位、`import vllm` 通过）。
 
-> 镜像烘焙命令（上游已 clone 在 `blazux/qwen3.8-Flash-DGX@209646c`）：
+> 构建/推送命令备忘（本机 Docker Desktop 的 containerd 存储产出的 manifest 会被 ACR 以
+> `application/vnd.oci.empty.v1+json` 拒绝，故用 skopeo 从 `docker-archive` 重新编码推送）：
 >
 > ```bash
 > cd blazux/qwen3.8-Flash-DGX
-> docker build -t registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0 \
+> docker build -t qwen38-flash-next:v1.0.0 \
 >   --label "de.qwen38fn.upstream-repo=https://github.com/blazux/qwen3.8-Flash-DGX.git" \
 >   --label "de.qwen38fn.upstream-ref=209646c" \
 >   --label "de.qwen38fn.upstream-sha=209646c" .
-> docker push registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0
+> docker save qwen38-flash-next:v1.0.0 -o vllm-image.tar
+> skopeo copy docker-archive:vllm-image.tar \
+>   docker://registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0
 > ```
->
-> **构建状态（2026-09 尝试）：** 基座层大部分已下载至本地 Docker 缓存，但构建被本机网络
-> 阻断——Docker Hub 直连 IPv6 超时、且 Docker Desktop 残留静态代理 `127.0.0.1:1082`
-> （指向已停用的 Clash 客户端）导致 daocloud 镜像兜底失败。**镜像尚未烘焙/推送**；网络
-> 恢复（本地代理/flash app 启动或 Docker Hub 可达）后按上面命令继续即可。镜像内上游
-> commit（`de.qwen38fn.upstream-sha` label）已定 `209646c`，便于复现。
 
 ## 主要可调变量
 
