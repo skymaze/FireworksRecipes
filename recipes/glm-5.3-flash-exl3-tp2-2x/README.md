@@ -30,9 +30,11 @@ MTP k=2 基线 ~24.6。**2026-08-29 上游 P1 阶梯把 `MAX_NUM_BATCHED_TOKENS`
 **2026-08-30 上游又把 `DFLASH_DRAFT_TP` 默认改为 2**（drafter 跨 TP 分片，实验室 structured 65.1 tok/s）；
 **2026-09-01 上游合并胖 expert prefill 加速（#77）：`EXL3_FAT_KERNEL=1` 默认 + `MAX_NUM_BATCHED_TOKENS` 默认 2048→**7168**（E2 内核下本机最优单发值；旧 3584/4096 被胖 expert 税吃掉是 no-fat-kernel 时代的结论），另加数值化自旋（`GLM53_SPINWAIT_MS`）与 indexer workspace 右尺寸（`GLM53_INDEXER_WORKSPACE=rightsize`，可选省 ~5 GiB KV）。上游还合并了实验性 TP4 线（`start-tp4.sh` / `.env.tp4`，4× GB10，本配方仍为 TP=2）。**镜像已按上游现行 overlay 重建（ACR `glm53-flash-exl3:v1.1.0`，@c707598），本配方已跟随默认 2**。
 上游 1M serve（util 0.87，同池 1,754,237 token / **1.75×** / 690 blocks / **18.67 GiB**）；
-KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.61 GiB）；先核对节点 `:exl3` 与上游同一构建，
-差一口气时优先把 `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` 设为 0（去掉 CUDA-graph 显存预留，
-还 KV ~2.6 GiB，graphs 仍开；上游 2026-08-29 CG_ESTIMATE 旋钮），仍不够再调高 util（≥0.90）。
+KV 余量随 boot 浮动——本机 0.87 曾**只余 ~11.9 GiB（< 1M 所需 ~14.5 GiB，v1.1.0 实测直接启动失败）**；
+v1.5.1 起配方默认已把两个旋钮改为**还 KV**：
+`VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0`（不扣 CUDA-graph 显存估计，+~2.6 GiB，graphs 仍开）+
+`GLM53_INDEXER_WORKSPACE=rightsize`（1M 下 indexer workspace 从锁死 ~5 GiB 缩到按需，+~4.9 GiB）；
+仍不够再调高 util（≥0.90）。
 前缀缓存 block-aligned（3584-token）命中，~7.7k 后续轮 93% 命中、TTFT 9.7s → 1.17s。
 
 ## 快速开始
@@ -57,7 +59,7 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter**（须分发到节点缓存） |
 | `MAX_MODEL_LEN` | `1000000` | 上游生产档 1M（勿降 256k） |
 | `GPU_MEMORY_UTILIZATION` | `0.87` | 上游实测值（池 ~18.67 GiB）；本机若 <14.61 GiB 先核对镜像构建，再调 ≥0.90 |
-| `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `1` | 0 = 去掉 CUDA-graph 显存预留还 KV ~2.6 GiB（graphs 仍开；KV 池不足时先试它） |
+| `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `0` | 0（默认）= 不扣 CUDA-graph 显存估计，还 KV ~2.6 GiB（graphs 仍开）——1M 需 ~14.5 GiB KV，默认 1 时本机只有 ~11.9 GiB 会启动失败 |
 | `MAX_NUM_SEQS` | `4` | decode 批（上游 pin） |
 | `MAX_NUM_BATCHED_TOKENS` | `7168` | 上游 2026-09-01 E2 默认（`EXL3_FAT_KERNEL=1` 下本机最优单发；旧 2048 是 08-29 老内核 keep。**8192 撑爆 GB10 indexer smem，永远别上**） |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`；别用 bf16/nvfp4 |
@@ -66,7 +68,7 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 | `EXL3_FUSED_MOE` | `1` | 每层融合 `exl3_moe`；0 = 逐 expert 循环 |
 | `EXL3_FAT_KERNEL` | `1` | E2 fat-expert prefill 内核（v1.1.0 镜像已编译，上游 2026-09-01 默认）；0 = 旧胖 expert 路径 |
 | `GLM53_SPINWAIT_MS` | `stock` | stock = vLLM 默认 1s 自旋；数字 = 毫秒（上游数值化自旋补丁；16ms 档单流略快） |
-| `GLM53_INDEXER_WORKSPACE` | `stock` | stock（默认）/ `rightsize`（1M 下 sparse-indexer prefill workspace 右尺寸，省 ~5 GiB KV） |
+| `GLM53_INDEXER_WORKSPACE` | `rightsize` | rightsize（默认）= 1M 下把锁死的 ~5 GiB indexer workspace 缩到按需，还回 KV（本机必须）；`stock` = 上游默认（锁 ~5 GiB） |
 | `ABLIT` | `0` | 0 = stock 权重；1 = o_proj 正交化（dealign，15-45 层含 MTP 块）。`patch_ablit.py` 每次启动应用（与上游 start.sh 一致） |
 | `GLM53_MIXED_PREFILL_CHUNK` | `skip` | decode 步不混入 peer prefill（上游 pin） |
 | `GLM53_SUPPRESS_STOPS_IN_REASONING` | `1` | thinking 内客户端 stop 保持休眠 |
@@ -88,8 +90,10 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
   `--enable-prompt-tokens-details` 已开；OpenAI API 无状态，仅 block-aligned 前缀命中）。
 - **EXL3 ≠ NVFP4**：`--quantization exl3` 固定；权重、KV、镜像必须配套。草稿 KV 为 `auto`/bf16、
   （dense DFlash2 用不了目标的 `fp8_ds_mla`）；`DFLASH_DRAFT_TP=2`（默认）跨 TP 分片；目标仍 `fp8`。
-- **KV 余量因机而异**：boot 日志的 `Available KV cache memory` 若低于 14.61 GiB（1M 硬需求），
-  调高 `GPU_MEMORY_UTILIZATION`（≥0.90）；过高会对 MM/长 prefill 峰值失去余量。
+- **KV 余量因机而异**：boot 日志的 `Available KV cache memory` 若低于 ~14.5 GiB（1M 硬需求），
+  先确认镜像为 v1.1.0 + 配方 v1.5.1 默认（`VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` +
+  `GLM53_INDEXER_WORKSPACE=rightsize`，合计还 KV ~7 GiB）；仍不足再调高
+  `GPU_MEMORY_UTILIZATION`（≥0.90）；过高会对 MM/长 prefill 峰值失去余量。
 - 冷启动慢，健康检查 start_period 900s；CUDA graphs 已开，勿 `--enforce-eager`。
 - 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`、xgrammar 投机解码终止修复、
   spinwait/indexer-workspace/ablit 等），与上游 start.sh 一致；补丁一律 `if [ -f ]` 哨兵执行，缺文件自动跳过。

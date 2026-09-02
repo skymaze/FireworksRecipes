@@ -41,11 +41,13 @@ plus a numeric spin-wait knob (`GLM53_SPINWAIT_MS`) and the sparse-indexer works
 has now been rebuilt from upstream's current overlay (ACR `glm53-flash-exl3:v1.1.0`, @c707598) and this
 recipe follows with default 2**.
 Upstream 1M serve (util 0.87, same pool 1,754,237
-/ **1.75×** / 690 blocks / **18.67 GiB**). KV headroom drifts per boot — this kit once left only
-11.77 GiB at 0.87 (< the 14.61 GiB a 1M seq needs). First verify the node `:exl3` is the same build as
-upstream; if it is just short, prefer `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` (drops the CUDA-graph
-memory deduction, returning ~2.6 GiB to KV while graphs stay on — upstream 2026-08-29 CG_ESTIMATE knob),
-then raise util (≥0.90) only as a last resort. Prefix
+/ **1.75×** / 690 blocks / **18.67 GiB**). KV headroom drifts per boot — this kit once
+left only ~11.9 GiB at 0.87 (< the ~14.5 GiB a 1M seq needs; with v1.1.0 it failed to boot).
+Since v1.5.1 the recipe defaults both knobs toward reclaiming KV:
+`VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` (drop the CUDA-graph memory estimate,
+~2.6 GiB back, graphs stay on) and `GLM53_INDEXER_WORKSPACE=rightsize` (at 1M the indexer
+workspace drops from a locked ~5 GiB to the per-step need, ~4.9 GiB back); raise util
+(≥0.90) only as a last resort. Prefix
 cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 1.17 s.
 
 ## Quick start
@@ -74,7 +76,7 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 | `GLM53EXL3_DRAFT_PATH` | `incoai/GLM-5.3-Flash-DFlash2` | **DFlash2 drafter** (must reach the node cache) |
 | `MAX_MODEL_LEN` | `1000000` | upstream production 1M (do not drop to 256k) |
 | `GPU_MEMORY_UTILIZATION` | `0.87` | upstream-validated (pool ~18.67 GiB); if your boot is <14.61 GiB verify the image build first, then raise to ≥0.90 |
-| `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `1` | 0 = drop the CUDA-graph KV deduction, ~2.6 GiB back (graphs stay on; try first when the pool is short) |
+| `VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS` | `0` | 0 (default) = no CUDA-graph memory estimate, ~2.6 GiB back to KV (graphs stay on) — 1M needs ~14.5 GiB KV and this kit only had ~11.9 GiB with the default 1 (boot failure) |
 | `MAX_NUM_SEQS` | `4` | decode batch (upstream pin) |
 | `MAX_NUM_BATCHED_TOKENS` | `7168` | upstream 2026-09-01 E2 default (best one-shot with `EXL3_FAT_KERNEL=1` on v1.1.0; the old 2048 was the 08-29 keep for the previous kernel; **8192 still blows the GB10 indexer smem**) |
 | `KV_CACHE_DTYPE` | `fp8` | packed `fp8_ds_mla`; not bf16/nvfp4 |
@@ -83,7 +85,7 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 | `EXL3_FUSED_MOE` | `1` | fused `exl3_moe` per layer; 0 = per-expert loop |
 | `EXL3_FAT_KERNEL` | `1` | E2 fat-expert prefill kernel (compiled into v1.1.0, upstream 2026-09-01 default); 0 = legacy fat-expert path |
 | `GLM53_SPINWAIT_MS` | `stock` | stock = vLLM default 1 s spin; a number = ms (upstream numeric spin-wait patch; the 16 ms tier measured slightly faster) |
-| `GLM53_INDEXER_WORKSPACE` | `stock` | stock (default) / `rightsize` (1M: sparse-indexer prefill workspace right-sized, frees ~5 GiB KV) |
+| `GLM53_INDEXER_WORKSPACE` | `rightsize` | rightsize (default) = at 1M the indexer workspace drops from a locked ~5 GiB to the per-step need, KV returned (required on this kit); `stock` = upstream default (locks ~5 GiB) |
 | `ABLIT` | `0` | 0 = stock weights; 1 = o_proj orthogonalization (dealign, layers 15-45 incl. MTP block). `patch_ablit.py` applies at every start (matches upstream start.sh) |
 | `GLM53_MIXED_PREFILL_CHUNK` | `skip` | no peer prefill in a decode step (upstream pin) |
 | `GLM53_SUPPRESS_STOPS_IN_REASONING` | `1` | client stops dormant while thinking |
@@ -108,9 +110,11 @@ auto-filled by Fireworks; `SERVED_MODEL_NAME` (default `GLM-5.3-Flash-EXL3`) and
   `--enable-prompt-tokens-details` on; the OpenAI API is stateless — only block-aligned prefixes hit).
 - **EXL3 ≠ NVFP4**: `--quantization exl3` is fixed; weights, KV and image must match. Draft KV is
   `auto`/bf16 (dense DFlash2 cannot use the target's `fp8_ds_mla`); `DFLASH_DRAFT_TP=2` (default) shards it across TP; the target stays `fp8`.
-- **KV headroom varies per kit**: if the boot log's `Available KV cache memory` is below 14.61 GiB
-  (the 1M requirement), raise `GPU_MEMORY_UTILIZATION` (≥0.90); too high loses headroom over the
-  MM / long-prefill activation peak.
+- **KV headroom varies per kit**: if the boot log's `Available KV cache memory` is below ~14.5 GiB
+  (the 1M requirement), first make sure the image is v1.1.0 and the recipe v1.5.1 defaults apply
+  (`VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` + `GLM53_INDEXER_WORKSPACE=rightsize`, together
+  returning ~7 GiB to KV); only then raise `GPU_MEMORY_UTILIZATION` (≥0.90); too high loses headroom
+  over the MM / long-prefill activation peak.
 - Cold start is slow; healthcheck `start_period` is 900s. CUDA graphs are on — do not `--enforce-eager`.
 - The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, the XGrammar
   speculative-decode termination backports, spinwait / indexer-workspace / ablit, etc.) — same as upstream start.sh;
