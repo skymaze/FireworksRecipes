@@ -67,6 +67,7 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 | `EXL3_FAT_KERNEL` | `1` | E2 fat-expert prefill 内核（v1.1.0 镜像已编译，上游 2026-09-01 默认）；0 = 旧胖 expert 路径 |
 | `GLM53_SPINWAIT_MS` | `stock` | stock = vLLM 默认 1s 自旋；数字 = 毫秒（上游数值化自旋补丁；16ms 档单流略快） |
 | `GLM53_INDEXER_WORKSPACE` | `stock` | stock（默认）/ `rightsize`（1M 下 sparse-indexer prefill workspace 右尺寸，省 ~5 GiB KV） |
+| `ABLIT` | `0` | 0 = stock 权重；1 = o_proj 正交化（dealign，15-45 层含 MTP 块）。`patch_ablit.py` 每次启动应用（与上游 start.sh 一致） |
 | `GLM53_MIXED_PREFILL_CHUNK` | `skip` | decode 步不混入 peer prefill（上游 pin） |
 | `GLM53_SUPPRESS_STOPS_IN_REASONING` | `1` | thinking 内客户端 stop 保持休眠 |
 | `LANGUAGE_MODEL_ONLY` | `0` | 0=加载视觉塔；1=仅文本（更快） |
@@ -90,8 +91,9 @@ KV 余量随 boot 浮动——本机 0.87 曾只余 11.77 GiB（< 1M 所需 14.6
 - **KV 余量因机而异**：boot 日志的 `Available KV cache memory` 若低于 14.61 GiB（1M 硬需求），
   调高 `GPU_MEMORY_UTILIZATION`（≥0.90）；过高会对 MM/长 prefill 峰值失去余量。
 - 冷启动慢，健康检查 start_period 900s；CUDA graphs 已开，勿 `--enforce-eager`。
-- 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`、xgrammar 投机解码终止修复等），
-  与上游 start.sh 一致；补丁一律 `if [ -f ]` 哨兵执行，缺文件自动跳过。
+- 容器启动会先执行镜像内运行时 overlay 补丁（含禁用 GB10 `persistent_topk`、xgrammar 投机解码终止修复、
+  spinwait/indexer-workspace/ablit 等），与上游 start.sh 一致；补丁一律 `if [ -f ]` 哨兵执行，缺文件自动跳过。
+  `ABLIT` 默认 0（stock 权重），`patch_ablit.py` 幂等、每次启动都会应用。
 - **镜像侧记录（2026-09-02 ACR 重建）**：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0`
   按上游现行 Dockerfile 烘焙（`@c707598` / 2026-09-01，digest `sha256:06035a0d…`），运行时补丁
   `suppress_stops_in_reasoning` / `scheduler_decode_floor` / `hybrid_prefix_hit` / `xgrammar_termination` /

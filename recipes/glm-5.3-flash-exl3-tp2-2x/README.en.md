@@ -84,6 +84,7 @@ cache is block-aligned (3584-token): a ~7.7k follow-up hits 93%, TTFT 9.7 s → 
 | `EXL3_FAT_KERNEL` | `1` | E2 fat-expert prefill kernel (compiled into v1.1.0, upstream 2026-09-01 default); 0 = legacy fat-expert path |
 | `GLM53_SPINWAIT_MS` | `stock` | stock = vLLM default 1 s spin; a number = ms (upstream numeric spin-wait patch; the 16 ms tier measured slightly faster) |
 | `GLM53_INDEXER_WORKSPACE` | `stock` | stock (default) / `rightsize` (1M: sparse-indexer prefill workspace right-sized, frees ~5 GiB KV) |
+| `ABLIT` | `0` | 0 = stock weights; 1 = o_proj orthogonalization (dealign, layers 15-45 incl. MTP block). `patch_ablit.py` applies at every start (matches upstream start.sh) |
 | `GLM53_MIXED_PREFILL_CHUNK` | `skip` | no peer prefill in a decode step (upstream pin) |
 | `GLM53_SUPPRESS_STOPS_IN_REASONING` | `1` | client stops dormant while thinking |
 | `LANGUAGE_MODEL_ONLY` | `0` | 0=load vision tower; 1=language-only (faster) |
@@ -111,7 +112,10 @@ auto-filled by Fireworks; `SERVED_MODEL_NAME` (default `GLM-5.3-Flash-EXL3`) and
   (the 1M requirement), raise `GPU_MEMORY_UTILIZATION` (≥0.90); too high loses headroom over the
   MM / long-prefill activation peak.
 - Cold start is slow; healthcheck `start_period` is 900s. CUDA graphs are on — do not `--enforce-eager`.
-- The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, the XGrammar speculative-decode termination backports, etc.) — same as upstream start.sh; every patch runs behind an `if [ -f ]` guard, so missing files are skipped silently.
+- The container runs the in-image runtime overlay patches on start (incl. disabling GB10 `persistent_topk`, the XGrammar
+  speculative-decode termination backports, spinwait / indexer-workspace / ablit, etc.) — same as upstream start.sh;
+  every patch runs behind an `if [ -f ]` guard, so missing files are skipped silently. `ABLIT` defaults to 0 (stock
+  weights); `patch_ablit.py` is idempotent and runs on every start.
 - **Image build record (2026-09-02 ACR rebuild)**: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0`
   is baked from the current upstream Dockerfile (`@c707598` / 2026-09-01, digest `sha256:06035a0d…`); the runtime
   patches (`suppress_stops_in_reasoning` / `scheduler_decode_floor` / `hybrid_prefix_hit` /
