@@ -23,9 +23,9 @@
       "default": "QuantTrio/GLM-5.2-Int4-Int8Mix",
       "picker": "model",
       "required": true,
-      "help": "GLM-5.2 QuantTrio unpruned 权重：默认按 HF hub 布局离线解析（节点缓存实为 models--QuantTrio--GLM-5.2-Int4-Int8Mix，378G=124 主权重+4 MTP 分片）；也可填缓存内 snapshot 绝对路径，如 /cache/huggingface/hub/models--QuantTrio--GLM-5.2-Int4-Int8Mix/snapshots/<hash>",
+      "help": "GLM-5.2 QuantTrio unpruned 权重（按 repo id 离线解析）；也可填缓存内 snapshot 绝对路径",
       "label_en": "Model path",
-      "help_en": "GLM-5.2 QuantTrio unpruned weights: default resolves offline via the HF hub layout (node cache is models--QuantTrio--GLM-5.2-Int4-Int8Mix, 378G = 124 weight + 4 MTP shards); or give an absolute snapshot path like /cache/huggingface/hub/models--QuantTrio--GLM-5.2-Int4-Int8Mix/snapshots/<hash>"
+      "help_en": "GLM-5.2 QuantTrio unpruned weights (resolved offline by repo id); or an absolute snapshot path in the cache"
     },
     {
       "key": "SERVED_MODEL_NAME",
@@ -49,9 +49,9 @@
       "type": "int",
       "source": "user",
       "default": "315968",
-      "help": "生产 315,968（对齐 64 对齐的 block-table seam；316000/316K 会触发 indexer MTP seam 崩溃）",
+      "help": "生产 315,968（须 64 对齐，否则并发下崩溃）",
       "label_en": "Max context length",
-      "help_en": "Production 315,968 (64-aligned block-table seam; 316000/316K crashes the indexer MTP seam)"
+      "help_en": "Production 315,968 (must stay 64-aligned or it crashes)"
     },
     {
       "key": "MAX_NUM_SEQS",
@@ -69,9 +69,9 @@
       "type": "int",
       "source": "user",
       "default": "4096",
-      "help": "DCP4 下勿用 8192（源仓库实测 3/3 启动失败）；4096 为生产值",
+      "help": "生产 4096；DCP4 下勿用 8192（启动失败）",
       "label_en": "Max batched tokens",
-      "help_en": "Do not use 8192 at DCP4 (3/3 boot failures upstream); 4096 is production"
+      "help_en": "Production 4096; do not use 8192 at DCP4 (fails to boot)"
     },
     {
       "key": "GPU_MEMORY_UTILIZATION",
@@ -79,9 +79,9 @@
       "type": "float",
       "source": "user",
       "default": "0.90",
-      "help": "生产 0.90（保 KV 池优先；降到 0.87 会因evict深会话付出~100x代价）",
+      "help": "生产 0.90（保 KV 池；降到 0.87 会 evict 深会话）",
       "label_en": "GPU memory utilization",
-      "help_en": "Production 0.90 (protect the KV pool; 0.87 evicts deep sessions at ~100x cost)"
+      "help_en": "Production 0.90 (protects the KV pool; 0.87 evicts deep sessions)"
     },
     {
       "key": "CPU_DIST_TIMEOUT",
@@ -97,9 +97,9 @@
       "type": "string",
       "source": "user",
       "default": "",
-      "help": "留空=用镜像自带 NCCL（实测启动+多节点 NCCL+推理全链路可用）；仅做 NCCL wedge 研究时再填写随缓存分发的 nccl-2.30.4 路径",
+      "help": "留空 = 镜像自带 NCCL；仅 NCCL wedge 研究时填 nccl-2.30.4 路径",
       "label_en": "NCCL LD_PRELOAD path",
-      "help_en": "Empty = use the image's bundled NCCL (verified end-to-end incl. multi-node NCCL); only set a path for NCCL wedge research (nccl-2.30.4 distributed with the cache)"
+      "help_en": "Empty = the image's bundled NCCL; set only for NCCL wedge research"
     },
     {
       "key": "MASTER_PORT",

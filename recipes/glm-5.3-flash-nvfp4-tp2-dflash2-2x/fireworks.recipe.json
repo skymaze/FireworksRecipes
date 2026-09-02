@@ -11,9 +11,9 @@
       "source": "user",
       "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2",
       "picker": "image",
-      "help": "阿里云 ACR 平台镜像（与 TP4 DFlash2 配方同一镜像）：按上游公开 GHCR 链（ghcr.io/tonyd2wild/vllm-glm53-flash:sm121-v11-dflash2 = day-0 + v1→v9 九层 patch 栈 + DFlash2 overlay）烘焙，另在镜像内烘焙 SM121 sparse_attn_indexer_kpool 模块（上游由 launcher 运行时 bind-mount 的同一文件，平台无法分发主机文件，故打入镜像）与 mm chat 模板",
+      "help": "ACR 平台镜像（与 TP4 DFlash2 同镜像；v1→v9 九层 patch + DFlash2 overlay + SM121 indexer 模块已烘焙）",
       "label_en": "vLLM image",
-      "help_en": "Aliyun ACR platform image (the same one the TP4 DFlash2 recipe uses): baked from the public upstream GHCR chain (ghcr.io/tonyd2wild/vllm-glm53-flash:sm121-v11-dflash2 = day-0 + the v1→v9 nine-layer patch stack + the DFlash2 overlay); additionally bakes the SM121 sparse_attn_indexer_kpool module (the same file upstream bind-mounts at launch — the platform cannot distribute host files, so it is baked) and the mm chat template"
+      "help_en": "ACR platform image (same as TP4 DFlash2; nine-layer patch stack + DFlash2 overlay + SM121 indexer module baked in)"
     },
     {
       "key": "GLM53_MODEL_PATH",
@@ -23,9 +23,9 @@
       "default": "RedHatAI/GLM-5.3-Flash-NVFP4",
       "picker": "model",
       "required": true,
-      "help": "主模型默认 RedHatAI/GLM-5.3-Flash-NVFP4（compressed-tensors，drop-in 无 flag 改动，加载快 ~2×）：修复 ModelOpt 构建的间歇性 token 损坏（vLLM #54150）。ModelOpt 版仍可用但带损坏：censored LibertAIDAI/GLM-5.3-Flash-NVFP4（120 分片 ~182GiB）、uncensored drowzeys/keys-GLM-5.3-Flash-NVFP4-ablit-l15-45-anchorstock（同 launcher 已验证）；也可填缓存内 snapshot 绝对路径",
+      "help": "主模型默认 RedHatAI/GLM-5.3-Flash-NVFP4（compressed-tensors，修复 ModelOpt token 损坏，加载快 ~2×；ModelOpt 版带损坏勿生产）；也可填缓存内 snapshot 绝对路径",
       "label_en": "Model path",
-      "help_en": "Main model defaults to RedHatAI/GLM-5.3-Flash-NVFP4 (compressed-tensors, drop-in with zero flag changes, loads ~2x faster): fixes the intermittent token corruption of ModelOpt builds (vLLM #54150). ModelOpt builds remain usable but corrupted: censored LibertAIDAI/GLM-5.3-Flash-NVFP4 (120 shards ~182 GiB), uncensored drowzeys/keys-GLM-5.3-Flash-NVFP4-ablit-l15-45-anchorstock (verified on the same launcher); or use an absolute snapshot path in the cache"
+      "help_en": "Main model, default RedHatAI/GLM-5.3-Flash-NVFP4 (compressed-tensors; fixes ModelOpt token corruption, loads ~2× faster; ModelOpt is corrupted — not for production); or an absolute snapshot path"
     },
     {
       "key": "GLM53_DRAFT_PATH",
@@ -35,9 +35,9 @@
       "default": "incoai/GLM-5.3-Flash-DFlash2",
       "picker": "model",
       "required": true,
-      "help": "DFlash2 块扩散草稿模型（qwen3 架构，5 层 SWA，dflash_config block_size=8 / selector_rank=256 / target_layer_ids [5,14,24,33,42]，单文件 model.safetensors 2.34GB）；与主模型一样由平台分发到节点 HF 缓存，容器内按 repo id 离线解析（HF_HOME=/cache/huggingface）",
+      "help": "DFlash2 块扩散草稿模型（qwen3 架构、5 层 SWA，2.34 GB）；与主模型一样分发到节点缓存",
       "label_en": "DFlash2 drafter model",
-      "help_en": "DFlash2 block-diffusion draft model (qwen3 arch, 5 SWA layers, dflash_config block_size=8 / selector_rank=256 / target_layer_ids [5,14,24,33,42], single model.safetensors 2.34GB); distributed to the node HF cache like the main model and resolved offline by repo id (HF_HOME=/cache/huggingface)"
+      "help_en": "DFlash2 block-diffusion draft model (qwen3 arch, 5 SWA layers, 2.34 GB); distribute to the node cache like the main model"
     },
     {
       "key": "SERVED_MODEL_NAME",
@@ -61,9 +61,9 @@
       "type": "int",
       "source": "user",
       "default": "262144",
-      "help": "上游已验证的「one to copy」档位：262,144（TP2 每 rank ~97GiB 权重，勿上 1M）",
+      "help": "262,144（TP2 每 rank ~97 GiB 权重，勿上 1M）",
       "label_en": "Max context length",
-      "help_en": "The upstream-validated \"one to copy\" value: 262,144 (TP2 carries ~97 GiB weights/rank; do not use 1M)"
+      "help_en": "262,144 (TP2 ~97 GiB weights/rank — no 1M)"
     },
     {
       "key": "MAX_NUM_SEQS",
@@ -71,9 +71,9 @@
       "type": "int",
       "source": "user",
       "default": "6",
-      "help": "源 launcher 生产 6（TP2 每 rank ~97GiB 权重）",
+      "help": "上游生产 6",
       "label_en": "Max concurrent sequences",
-      "help_en": "Upstream launcher production value 6 (TP2 ~97 GiB weights/rank)"
+      "help_en": "Upstream production 6"
     },
     {
       "key": "MAX_NUM_BATCHED_TOKENS",
@@ -81,9 +81,9 @@
       "type": "int",
       "source": "user",
       "default": "8192",
-      "help": "上游 2026-08-30 pin（与 TP4 同档）：投机模式下不设会静默推导 2048 限并发吞吐，设 8192 后 TP4 实测 C4 并发 63→99 tok/s（+57%）、单流不变；本 flag 与拓扑无关，TP2 同享",
+      "help": "上游 pin 8192（TP4 实测 2048→8192：C4 并发 63→99 tok/s、单流不变；与拓扑无关）",
       "label_en": "Max batched tokens",
-      "help_en": "Upstream 2026-08-30 pin (same value as TP4): unset, vLLM silently derives 2048 under spec decode and caps concurrent throughput; 8192 measured C4 63→99 tok/s (+57%) at TP4 with single-stream unchanged — the flag is topology-agnostic, so TP2 gets the same win"
+      "help_en": "Upstream pin 8192 (TP4 measured 63→99 tok/s at C4 vs the silently-derived 2048; topology-agnostic)"
     },
     {
       "key": "GPU_MEMORY_UTILIZATION",
@@ -91,9 +91,9 @@
       "type": "float",
       "source": "user",
       "default": "0.85",
-      "help": "上游生产 0.85（0.78–0.80 在 131K+ 会饿死 KV 池）；配合 profiler 定池，改动请先用真实长 prefill 把关",
+      "help": "生产 0.85（0.78–0.80 会饿死 KV 池）；改动用真实长 prefill 把关",
       "label_en": "GPU memory utilization",
-      "help_en": "Upstream production 0.85 (0.78-0.80 starves the KV cache at 131K+); pairs with the profiler-sized pool — gate any change behind a real long prefill"
+      "help_en": "Production 0.85 (0.78–0.80 starves the KV cache); gate changes behind a real long prefill"
     },
     {
       "key": "KV_CACHE_MEMORY",
@@ -101,9 +101,9 @@
       "type": "string",
       "source": "user",
       "default": "",
-      "help": "默认留空 = **不传 --kv-cache-memory，让 profiler 定池**（上游验证：DFlash2 + fp8 KV @262K = 581,040-token 池，28,818-token 深 prompt 存活）。**勿 pin**：一旦传值，vLLM 仍跑 profile 但从不扣激活峰值（util 失效），分配/预热/短答全过，第一个长 prompt 无地放激活即死（上游在 4 个不同 pin 上复现）。确要固定填字节数（如旧 3GiB = 3221225472）",
+      "help": "留空（默认）= profiler 定池（262K 下 581,040-token 池，推荐）；勿 pin：激活峰值不扣，首条长 prompt 即死",
       "label_en": "Pinned KV budget (bytes; empty = profiler-sized)",
-      "help_en": "Leave empty (default) = do NOT pass --kv-cache-memory, let the profiler size the pool (upstream-verified: DFlash2 + fp8 KV @262K = 581,040-token pool, survived a 28,818-token deep prompt). Do not pin: with a pin vLLM still profiles but never subtracts the measured activation peak (util dies), allocation/warmup/short generations pass, then the first long prompt OOMs — reproduced at four different pins upstream. If you really must, set raw bytes (old 3 GiB = 3221225472)"
+      "help_en": "Empty (default) = profiler-sized pool (581,040 tokens at 262K, recommended); do not pin — the activation peak is not deducted and the first long prompt dies"
     },
     {
       "key": "DFLASH2_NUM_SPECULATIVE_TOKENS",
@@ -111,9 +111,9 @@
       "type": "int",
       "source": "user",
       "default": "7",
-      "help": "必须是 block_size-1=7：drafter 按 8 的 block 训练，末位是目标模型已验证 token；填 8 会草稿一个模型从未学过的位置",
+      "help": "必须 = block_size−1 = 7（drafter 按 8 训练；填 8 会草稿模型没学过的位置）",
       "label_en": "DFlash2 speculative tokens (block_size-1)",
-      "help_en": "Must be block_size-1=7: the drafter is trained for a block of 8 and the last position is the target's own verified token; 8 drafts a position the model never learned"
+      "help_en": "Must be block_size−1 = 7 (drafter trained for 8; 8 drafts a position the model never learned)"
     },
     {
       "key": "CHAT_TEMPLATE",
@@ -121,9 +121,9 @@
       "type": "string",
       "source": "user",
       "default": "/opt/glm53/chat_template_mm.jinja",
-      "help": "镜像内已烘焙 mm 模板（上游源仓库 chat_template_mm.jinja），默认即命中、Vision 直接可用（同时不投机）；填空则退回 checkpoint 自带 text-only 模板",
+      "help": "镜像内 mm 模板（默认开 Vision，不投机）；填空 = 纯文本",
       "label_en": "Chat template (Vision-capable)",
-      "help_en": "The mm template is baked into the image (chat_template_mm.jinja from the upstream repo) and is the default, so Vision works out of the box (it is just not speculated); empty falls back to the checkpoint's built-in text-only template"
+      "help_en": "In-image MM template (default: Vision on, not speculated); empty = text-only"
     },
     {
       "key": "MASTER_PORT",

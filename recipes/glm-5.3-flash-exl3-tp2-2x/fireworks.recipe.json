@@ -12,8 +12,8 @@
       "source": "user",
       "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0",
       "picker": "image",
-      "help": "ACR 烘焙 EXL3 overlay 镜像（按上游 MiaAI-Lab 现行 Dockerfile @c707598 / 2026-09-01：FROM vllm-openai glm53-flash-arm64-cu130）：NoPE-MLA SM121 sparse 补丁 + exllamav3_ext（sm_121a，含构建期编译的 exl3_fat_gemm E2 内核）+ DFlash2/EAGLE3/video 补丁 + MM chat 模板 + suppress_stops/scheduler_decode_floor/hybrid_prefix_hit/xgrammar/kpool/spinwait/indexer-workspace 运行时补丁全部烘焙",
-      "help_en": "ACR-baked EXL3 overlay image (from upstream MiaAI-Lab current Dockerfile @c707598 / 2026-09-01: FROM vllm-openai glm53-flash-arm64-cu130): NoPE-MLA SM121 sparse patches + exllamav3_ext (sm_121a, with the build-time-compiled exl3_fat_gemm E2 kernel) + DFlash2/EAGLE3/video patches + MM chat template + all runtime patches (suppress_stops / scheduler_decode_floor / hybrid_prefix_hit / xgrammar / kpool / spinwait / indexer-workspace) baked in"
+      "help": "ACR 烘焙 EXL3 overlay 镜像（按上游 MiaAI-Lab Dockerfile @c707598；运行时补丁全部入镜像）",
+      "help_en": "ACR-baked EXL3 overlay image (from the upstream MiaAI-Lab Dockerfile @c707598; all runtime patches baked in)"
     },
     {
       "key": "GLM53EXL3_MODEL_PATH",
@@ -24,8 +24,8 @@
       "default": "Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw",
       "picker": "model",
       "required": true,
-      "help": "EXL3/TR3 uniform-K4 4bpw 量化主模型（~164GiB、brandonmusic 快照 5ab363a8… 的 Mia-AiLab 公共镜像，上游主路；镜像 404/120 分片不齐时回退 brandonmusic/GLM-5.3-Flash-tr3-4bpw）；请勿换 NVFP4 权重/marlin",
-      "help_en": "EXL3/TR3 uniform-K4 4bpw quant main model (~164 GiB; public Mia-AiLab mirror of the brandonmusic snapshot 5ab363a8…, upstream primary; falls back to brandonmusic/GLM-5.3-Flash-tr3-4bpw if the mirror is incomplete) — do not swap in NVFP4 weights / marlin"
+      "help": "EXL3/TR3 uniform-K4 4bpw 主模型（默认 Mia-AiLab 镜像；勿换 NVFP4 权重）",
+      "help_en": "EXL3/TR3 uniform-K4 4bpw main model (default Mia-AiLab mirror; do not swap in NVFP4 weights)"
     },
     {
       "key": "GLM53EXL3_DRAFT_PATH",
@@ -36,8 +36,8 @@
       "default": "incoai/GLM-5.3-Flash-DFlash2",
       "picker": "model",
       "required": true,
-      "help": "DFlash2 块扩散草稿模型（~2.3GiB BF16，CC BY-NC-ND 4.0 研究/评测）；与主模型一样分发给节点 HF 缓存，按 repo id 离线解析",
-      "help_en": "DFlash2 block-diffusion draft model (~2.3 GiB BF16, CC BY-NC-ND 4.0 research/eval); distributed to the node HF cache like the main model and resolved offline by repo id"
+      "help": "DFlash2 块扩散草稿模型（~2.3 GiB；与主模型一样分发到节点缓存）",
+      "help_en": "DFlash2 block-diffusion draft model (~2.3 GiB; distribute to the node cache like the main model)"
     },
     {
       "key": "SERVED_MODEL_NAME",
@@ -62,8 +62,8 @@
       "type": "int",
       "source": "user",
       "default": "1000000",
-      "help": "上源 launcher 生产档：1,000,000（padded slot-share 后 1M 分配得出，旧 900k 是同池 1.95× 补丁阶段）；util 0.87 下 KV 池 1,754,237 token（约 18.67 GiB、690 GPU blocks，1.75× 满 1M 请求）；不要为“释放 KV”降到 256k",
-      "help_en": "Upstream launcher production value: 1,000,000 (padded slot-share is why 1M allocates; the old 900k cap was 1.95× on this same pool); KV pool 1,754,237 tokens (~18.67 GiB, 690 GPU blocks, 1.75× a full 1M request) at util 0.87. Do not drop to 256k to “free” KV"
+      "help": "上游生产档 1,000,000（util 0.87 下池 1,754,237 token / 1.75×）；勿为省 KV 降到 256k",
+      "help_en": "Upstream production 1,000,000 (pool 1,754,237 tokens / 1.75× at util 0.87); do not drop to 256k"
     },
     {
       "key": "MAX_NUM_SEQS",
@@ -72,7 +72,7 @@
       "type": "int",
       "source": "user",
       "default": "4",
-      "help": "上游生产 4（decode 批）；MTP/投机每序列额外加 k+1 token",
+      "help": "上游生产 4（decode 批）；投机每序列额外 k+1 token",
       "help_en": "Upstream production 4 (decode batch); speculation adds k+1 tokens per sequence"
     },
     {
@@ -82,8 +82,8 @@
       "type": "int",
       "source": "user",
       "default": "7168",
-      "help": "上游 2026-09-01 E2 默认 7168（fat-expert E2 内核下本机最优单发值，须 EXL3_FAT_KERNEL=1 同配，v1.1.0 镜像已验证；旧 2048 是 08-29 P1 老内核 keep）——不要为前缀缓存命中而调它，单个超大 prefill 仍受它约束",
-      "help_en": "Upstream 2026-09-01 E2 default 7168 (best E2 one-shot on this kit with EXL3_FAT_KERNEL=1 on the v1.1.0 image; the old 2048 was the 08-29 P1 keep for the previous kernel). Do not tune it for APC; it still caps a single giant prefill"
+      "help": "上游 E2 默认 7168（配合 EXL3_FAT_KERNEL=1）；8192 撑爆 GB10 indexer smem，勿用",
+      "help_en": "Upstream E2 default 7168 (with EXL3_FAT_KERNEL=1); 8192 blows the GB10 indexer smem — never"
     },
     {
       "key": "EXL3_FUSED_MOE",
@@ -92,8 +92,8 @@
       "type": "string",
       "source": "user",
       "default": "1",
-      "help": "1 = 每层单次融合 exllamav3_ext.exl3_moe launch；0 = 独立 expert 的 LinearEXL3 循环（慢）。上游默认 1",
-      "help_en": "1 = one fused exllamav3_ext.exl3_moe launch per layer; 0 = unique-expert LinearEXL3 loop (slower). Upstream default 1"
+      "help": "1 = 每层融合 exl3_moe（默认，快）；0 = 逐 expert 循环（慢）",
+      "help_en": "1 = fused exl3_moe per layer (default, faster); 0 = per-expert loop (slower)"
     },
     {
       "key": "EXL3_FAT_KERNEL",
@@ -102,8 +102,8 @@
       "type": "string",
       "source": "user",
       "default": "1",
-      "help": "1（默认，上游 2026-09-01 默认）：启动时走构建期编译的 exl3_fat_gemm E2 内核（胖 expert prefill 加速，MNBT=7168 的前提——v1.1.0 镜像内 exllamav3_ext 已含该内核）；0 = 回退旧胖 expert 路径（LinearEXL3 税，无需重建镜像即生效）",
-      "help_en": "1 (default, upstream 2026-09-01 default): use the build-time-compiled exl3_fat_gemm E2 kernel (fat-expert prefill acceleration; the premise for MNBT=7168 — the v1.1.0 image's exllamav3_ext already ships it); 0 = fall back to the legacy fat-expert path (LinearEXL3 tax; takes effect without a rebuild)"
+      "help": "1（默认）= 走构建期编译的 exl3_fat_gemm E2 内核（MNBT=7168 的前提）；0 = 回退旧胖 expert 路径",
+      "help_en": "1 (default) = use the build-time-compiled exl3_fat_gemm E2 kernel (premise for MNBT=7168); 0 = legacy fat-expert path"
     },
     {
       "key": "GLM53_SPINWAIT_MS",
@@ -112,8 +112,8 @@
       "type": "string",
       "source": "user",
       "default": "stock",
-      "help": "stock（默认，上游同名）= vLLM 默认 1s 自旋；数字 = 自旋毫秒（上游数值化自旋补丁，实测 16ms 档单流略快；0 = 关自旋）。留空也按 stock 处理",
-      "help_en": "stock (default, upstream's value) = vLLM's default 1 s spin; a number = spin-wait milliseconds (upstream numeric spinwait patch; the 16 ms tier measured slightly faster single-stream; 0 = disable). Empty is treated as stock"
+      "help": "stock = vLLM 默认 1s 自旋；数字 = 自旋毫秒（16ms 档实测单流略快）；0 = 关",
+      "help_en": "stock = vLLM default 1 s spin; a number = spin-wait ms (16 ms measured slightly faster single-stream); 0 = off"
     },
     {
       "key": "GLM53_INDEXER_WORKSPACE",
@@ -122,8 +122,8 @@
       "type": "string",
       "source": "user",
       "default": "rightsize",
-      "help": "rightsize（默认，本配方 2026-09-02 起）= 上游 2026-09-01 选项：indexer prefill gather workspace 按每步合法上限而非 max_model_len×40 预留——1M 下从 KV 池锁死 ~5 GiB 缩到按需，把 KV 还回来（实测本机可用 KV 仅 ~11.9 GiB，必须开）；stock = 上游现行默认（1M 锁 ~5 GiB）",
-      "help_en": "rightsize (default since 2026-09-02) = upstream 2026-09-01 opt-in: size the indexer prefill-gather workspace by the legal per-step maximum instead of max_model_len*40, freeing the ~5 GiB it locks out of the KV pool at 1M (this kit measured only ~11.9 GiB of KV — required); stock = upstream current default (locks ~5 GiB at 1M)"
+      "help": "rightsize（默认）= workspace 按需预留，1M 下把锁死的 ~5 GiB 还回 KV；stock = 上游默认（锁 ~5 GiB）",
+      "help_en": "rightsize (default) = size the workspace per step, returning ~5 GiB to KV at 1M; stock = upstream default (locks ~5 GiB)"
     },
     {
       "key": "ABLIT",
@@ -132,8 +132,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "0（默认，上游同款）= stock 权重，不动 o_proj；1 = 加载时对 o_proj 做正交化（dealign，上都市面 15-45 层含 MTP 块）。patch_ablit.py 每次启动应用。1M 权重路线下偏差仅换 direction/alpha，勿在未压测时开启",
-      "help_en": "0 (default, same as upstream) = stock weights, o_proj untouched; 1 = orthogonalize o_proj at load time (dealign on layers 15-45 incl. the MTP block). patch_ablit.py applies at every start. Only flip direction/alpha after benching — do not enable untested"
+      "help": "1 = 加载时对 o_proj 正交化（dealign，15-45 层）；未压测勿开",
+      "help_en": "1 = orthogonalize o_proj at load (dealign, layers 15-45); enable only after benching"
     },
     {
       "key": "GLM53_MIXED_PREFILL_CHUNK",
@@ -142,8 +142,8 @@
       "type": "string",
       "source": "user",
       "default": "skip",
-      "help": "decode 进行中不让同一步混入 peer prefill（上游 issue #6：混合会把 decode 压到 ~5 tok/s）。skip = 本步跳过 prefill；N>0 = 上限 N token；0/off = 关。单路 prefill 上限跟随 MNBT（7168）；更大块让 decode 交错更粗，skip 反而更重要",
-      "help_en": "Do not mix a peer prefill into a decode step (upstream issue #6: mixing stalls decode at ~5 tok/s). skip = defer this step; N>0 = cap at N tokens; 0/off = off. Solo prefill follows MNBT (7168 now); bigger chunks make decode interleave coarser, so skip matters more"
+      "help": "decode 步不混入 peer prefill（混合会把 decode 压到 ~5 tok/s）；skip = 跳过本步；N>0 = 上限 N token",
+      "help_en": "Do not mix peer prefill into decode steps (mixing stalls decode at ~5 tok/s); skip = defer; N>0 = cap at N tokens"
     },
     {
       "key": "GLM53_SUPPRESS_STOPS_IN_REASONING",
@@ -152,8 +152,8 @@
       "type": "string",
       "source": "user",
       "default": "1",
-      "help": "1（默认）= 客户端 stop 字符串在 </thinking> 前保持休眠（thinking 默认开启时防止提前截断）；0 = 关",
-      "help_en": "1 (default) = keep client stop strings dormant until </thinking> (thinking-on default); 0 = off"
+      "help": "1（默认）= thinking 结束前客户端 stop 保持休眠；0 = 关",
+      "help_en": "1 (default) = keep client stops dormant until </thinking>; 0 = off"
     },
     {
       "key": "VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS",
@@ -162,8 +162,8 @@
       "type": "int",
       "source": "user",
       "default": "1",
-      "help": "1（默认，与上游一致）= vLLM 0.21 默认，从 KV 池扣 CUDA-graph 显存估计（本机 ~2.6 GiB）——这块空间是图捕获的物理预留，设 0 虽还 KV 但图捕获会超额、进程被系统 OOM 杀（本机实测）；1M 所需 KV 改由 GLM53_INDEXER_WORKSPACE=rightsize 归还（+~4.9 GiB）",
-      "help_en": "1 (default, same as upstream) = vLLM 0.21 default, deducts the CUDA-graph memory estimate (~2.6 GiB here) — that space is the physical reserve for graph capture; 0 frees it to KV but capture then exceeds total memory and the process is OOM-killed by the system (measured on this kit); the 1M KV requirement is met instead via GLM53_INDEXER_WORKSPACE=rightsize (+~4.9 GiB)"
+      "help": "保持 1（默认）：扣 CUDA-graph 显存估计（图捕获的物理预留，设 0 会被系统 OOM 杀）",
+      "help_en": "Keep 1 (default): deducts the CUDA-graph reserve; 0 lets capture exceed memory and the system OOM-kills the process"
     },
     {
       "key": "GPU_MEMORY_UTILIZATION",
@@ -172,8 +172,8 @@
       "type": "float",
       "source": "user",
       "default": "0.87",
-      "help": "上源实机验证 0.87（他们机器池 ~18.67 GiB）；KV 余量随 boot 浮动。若本机 boot 的 Available KV cache memory < 14.61 GiB（1M 硬需求），\n先确认节点上 :exl3 与上游同版本（镜像经集群分发），再调高此值（≥0.90）；过高会缩小 MM/长 prefill 峰值余量",
-      "help_en": "Upstream validated on hardware at 0.87 (pool ~18.67 GiB on their kit); KV headroom drifts per boot. If your boot reports Available KV cache memory < 14.61 GiB (the 1M floor), first make sure the :exl3 on the nodes is the same build as upstream (images are distributed via the cluster mirror), then raise this value (>=0.90). Too high shrinks the headroom over the MM / long-prefill activation peak"
+      "help": "上游实测 0.87（池 ~18.67 GiB）；本机 KV <14.61 GiB 时先核对镜像再调 ≥0.90；过高失去 MM/长 prefill 余量",
+      "help_en": "Upstream-validated 0.87 (pool ~18.67 GiB); if KV < 14.61 GiB verify the image then raise to ≥0.90; too high loses MM/long-prefill headroom"
     },
     {
       "key": "KV_CACHE_DTYPE",
@@ -188,8 +188,8 @@
         "fp8_e5m2",
         "bf16"
       ],
-      "help": "上游要求 fp8（packed fp8_ds_mla，唯一的 sparse-MLA 后端）；bf16 无 sparse 核、nvfp4 只支持 dense MHA——都别用",
-      "help_en": "Upstream requires fp8 (packed fp8_ds_mla, the only sparse-MLA backend); bf16 has no sparse kernel and nvfp4 is dense-MHA-only — do not use either"
+      "help": "上游要求 fp8（packed fp8_ds_mla）；bf16/nvfp4 都别用",
+      "help_en": "Upstream requires fp8 (packed fp8_ds_mla); do not use bf16/nvfp4"
     },
     {
       "key": "GLM53EXL3_DFLASH_TOKENS",
@@ -208,8 +208,8 @@
       "type": "int",
       "source": "user",
       "default": "2",
-      "help": "2（默认，上游 2026-08-30 keep；镜像已按上游现行 overlay 重建，structured 65.1 tok/s）——drafter 跨 TP 分片，每步投机不过 CX7；1 = 2.3GiB 草稿只留 rank 0；留空 = 继承目标 TP",
-      "help_en": "2 (default, upstream 2026-08-30 keep; image rebuilt from upstream current overlay, structured 65.1 tok/s) — shard the drafter across TP so speculation never crosses CX7; 1 = keep the 2.3 GiB draft on rank 0; empty = inherit target TP"
+      "help": "2（默认）= drafter 跨 TP 分片（投机不过 CX7，structured 65.1 tok/s）；1 = 草稿只留 rank 0",
+      "help_en": "2 (default) = shard the drafter across TP (structured 65.1 tok/s); 1 = keep the draft on rank 0"
     },
     {
       "key": "LANGUAGE_MODEL_ONLY",
@@ -218,8 +218,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "0（默认）= 加载视觉塔（image×4 / video×1）；1 = --language-model-only，纯文本更快",
-      "help_en": "0 (default) = load the vision tower (image×4 / video×1); 1 = --language-model-only (text-only, faster)"
+      "help": "0（默认）= 加载视觉塔；1 = 仅文本（更快）",
+      "help_en": "0 (default) = load the vision tower; 1 = text-only (faster)"
     },
     {
       "key": "SKIP_MM_PROFILING",
@@ -228,8 +228,8 @@
       "type": "string",
       "source": "user",
       "default": "1",
-      "help": "保持 1：最大规格的 image+video dummy profile 会 OOM 本 UMA",
-      "help_en": "Keep 1: a max-size image+video dummy profile OOMs this UMA"
+      "help": "保持 1（最大规格 MM dummy profile 会 OOM）",
+      "help_en": "Keep 1 (a max-size MM dummy profile OOMs this UMA)"
     },
     {
       "key": "LIMIT_MM",
@@ -248,8 +248,8 @@
       "type": "string",
       "source": "user",
       "default": "/opt/glm53/chat_template.jinja",
-      "help": "镜像内 MM 模板（<|image|>/<|video|>，源仓库 files/chat_template.jinja 烘焙）；checkpoint 自带的是 language-only 版",
-      "help_en": "In-image MM template (<|image|>/<|video|>, baked from files/chat_template.jinja); the checkpoint's built-in one is language-only"
+      "help": "镜像内 MM 模板（默认）；checkpoint 自带的是纯文本版",
+      "help_en": "In-image MM template (default); the checkpoint's built-in one is language-only"
     },
     {
       "key": "MASTER_PORT",

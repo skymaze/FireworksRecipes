@@ -73,9 +73,9 @@
       "type": "int",
       "source": "user",
       "default": "64",
-      "help": "源命令固定 64；既有 dspark 配方按 MAX_NUM_SEQS×(k+1)=48 计算，上调可兼容更大批次的图捕获但增加显存",
+      "help": "CUDA-Graph 捕获上限，源固定 64（默认）；上调兼容更大批次但更占显存",
       "label_en": "CUDA graph capture limit",
-      "help_en": "Source pinned 64; existing dspark recipes compute MAX_NUM_SEQS×(k+1)=48; raising it allows larger capture batches at more memory"
+      "help_en": "CUDA-graph capture cap, source-pinned 64 (default); raising it allows larger capture batches at more memory"
     },
     {
       "key": "GPU_MEMORY_UTILIZATION",
@@ -83,9 +83,9 @@
       "type": "float",
       "source": "user",
       "default": "0.85",
-      "help": "源命令默认 0.85；既有配方实机验证 0.80 稳定，0.90 无法开机，偏高时请注意显存余量",
+      "help": "默认 0.85；0.80 实机验证稳定，0.90 无法开机",
       "label_en": "GPU memory utilization",
-      "help_en": "Source default 0.85; existing recipes validated 0.80 stable and 0.90 fails to boot"
+      "help_en": "Default 0.85; 0.80 hardware-validated stable, 0.90 fails to boot"
     },
     {
       "key": "LOAD_FORMAT",
@@ -93,9 +93,9 @@
       "type": "string",
       "source": "user",
       "default": "instanttensor",
-      "help": "源命令为 instanttensor；若 Fireworks 分发的是标准 HF safetensors，请改为空(auto)或 safetensors",
+      "help": "模型加载格式（源 instanttensor）；分发为标准 HF safetensors 时改空(auto)或 safetensors",
       "label_en": "Model load format",
-      "help_en": "Source uses instanttensor; if Fireworks distributes standard HF safetensors, set empty (auto) or safetensors"
+      "help_en": "Load format (source: instanttensor); for standard HF safetensors distribution set empty (auto) or safetensors"
     },
     {
       "key": "MTP_NUM_TOKENS",
@@ -103,9 +103,9 @@
       "type": "int",
       "source": "user",
       "default": "5",
-      "help": "勿低于 checkpoint dspark_block_size(5)，否则草稿块被静默截断、解码吞吐下降",
+      "help": "dspark 投机 token 数，勿低于 dspark_block_size(5)，否则草稿块被静默截断、吞吐下降",
       "label_en": "DSpark speculative tokens",
-      "help_en": "Keep >= checkpoint dspark_block_size(5); below that draft blocks are silently truncated"
+      "help_en": "dspark speculative tokens; keep ≥ dspark_block_size(5) or draft blocks are silently truncated"
     },
     {
       "key": "COMPILATION_CONFIG",
@@ -113,9 +113,9 @@
       "type": "string",
       "source": "user",
       "default": "{\"cudagraph_mode\":\"FULL_AND_PIECEWISE\",\"custom_ops\":[\"all\"]}",
-      "help": "FULL_AND_PIECEWISE + custom_ops=all（源命令默认）；{} 恢复默认采集，FULL_DECODE_ONLY 只捕获 decode（既有配方实机验证零损耗）",
+      "help": "CUDA-Graph 编译模式：FULL_AND_PIECEWISE + custom_ops=all（源默认）；FULL_DECODE_ONLY 只捕获 decode（实测零损耗）",
       "label_en": "CUDA graph compilation mode",
-      "help_en": "FULL_AND_PIECEWISE + custom_ops all (source default); {} restores default capture; FULL_DECODE_ONLY captures decode only (verified cost-free in existing recipes)"
+      "help_en": "CUDA-graph compile mode: FULL_AND_PIECEWISE + custom_ops all (source default); FULL_DECODE_ONLY captures decode only (measured cost-free)"
     },
     {
       "key": "DEFAULT_THINKING",
@@ -123,7 +123,7 @@
       "type": "string",
       "source": "user",
       "default": "high",
-      "help": "off 不生成思考（最快）；low/high/max 开启思考并控制 reasoning effort；请求级参数可覆盖",
+      "help": "off 不生成思考（最快）；low/high/max 开启思考并控制 effort；请求级可覆盖",
       "label_en": "Default thinking mode",
       "help_en": "off: no thinking (fastest); low/high/max: thinking with reasoning effort; overridable per request"
     },

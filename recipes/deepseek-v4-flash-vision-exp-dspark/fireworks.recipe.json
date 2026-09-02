@@ -11,9 +11,9 @@
       "source": "user",
       "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5",
       "picker": "image",
-      "help": "Mia 热修复烘焙镜像（快照 d97c808ec…/2026-09-01：完整 fail-closed 热修复链 + Vision-Exp 原生图片支持）（hotfix5：上游 #168/#176/#179 三个 vision 修复——CHW channels-first 判定、encoder 缓存按图片 block 长度加盐、图片 placeholder 行走 bias_vl 路由并跳过 hash 表）",
+      "help": "Mia 热修复烘焙镜像（快照 d97c808ec…：完整 fail-closed 热修复链 + Vision-Exp 原生图片支持）",
       "label_en": "vLLM image",
-      "help_en": "Mia hotfix-baked image (snapshot d97c808ec…/2026-09-01: full fail-closed hotfix chain + Vision-Exp native image support) (hotfix5: the three upstream vision fixes #168/#176/#179 — CHW channels-first detection, encoder cache salted by image block length, image placeholder rows routed with bias_vl and skipping the hash table)"
+      "help_en": "Mia hotfix-baked image (snapshot d97c808ec…: full fail-closed hotfix chain + native Vision-Exp image support)"
     },
     {
       "key": "DSPARK_MODEL",
@@ -42,8 +42,8 @@
       "source": "user",
       "default": "8888",
       "label_en": "vLLM API port",
-      "help": "仅用于 API 服务端口（serve --port）；vLLM 内部端口已与 VLLM_PORT 环境变量解耦（随机分配），不再触发端口占用扫描日志",
-      "help_en": "API server port only (serve --port); decoupled from the VLLM_PORT env var so vLLM internal ports allocate ephemerally (no port-scan warnings)"
+      "help": "API 服务端口（serve --port）；已与 vLLM 内部端口解耦",
+      "help_en": "API server port (serve --port); decoupled from vLLM internal ports"
     },
     {
       "key": "MAX_MODEL_LEN",
@@ -75,8 +75,8 @@
       "type": "float",
       "source": "user",
       "default": "0.835",
-      "help": "文本利用率默认 0.835（与 Mia 配方默认一致）；显存紧张或图形捕获 OOM 时降至 ~0.80",
-      "help_en": "Text-util default 0.835 (matches the Mia recipe); lower toward ~0.80 if graph capture OOMs",
+      "help": "默认 0.835；显存紧张或图形捕获 OOM 时降至 ~0.80",
+      "help_en": "Default 0.835; lower toward ~0.80 if graph capture OOMs",
       "label_en": "GPU memory utilization"
     },
     {
@@ -85,9 +85,9 @@
       "type": "int",
       "source": "user",
       "default": "6",
-      "help": "Vision-Exp checkpoint num_nextn_predict_layers=3：k 必须 ≥ dspark_block_size(5) 且整除 3，6 为最小合法值（上游 2026-08-31 pin）；k=5 会被 Anemll 拒绝",
+      "help": "Vision-Exp：k 须 ≥5 且整除 3，最小合法值 6（k=5 会被 Anemll 拒绝）",
       "label_en": "DSpark speculative tokens",
-      "help_en": "Vision-Exp checkpoint has num_nextn_predict_layers=3: k must be >= dspark_block_size(5) and divisible by 3, so 6 is the smallest legal value (upstream 2026-08-31 pin); k=5 is rejected by Anemll"
+      "help_en": "Vision-Exp: k must be ≥5 and divisible by 3, so 6 is the minimum (k=5 is rejected by Anemll)"
     },
     {
       "key": "LONG_PREFILL_TOKEN_THRESHOLD",
@@ -95,9 +95,9 @@
       "type": "int",
       "source": "user",
       "default": "1024",
-      "help": "超过该 prefill token 量则分块，防止长 prefill 挤占 decode 通道（Mia #27）",
+      "help": "超过该 token 量的 prefill 分块处理，避免挤占 decode",
       "label_en": "Long-prefill token threshold",
-      "help_en": "Prefills above this count are chunked, keeping decode lanes fed (Mia #27)"
+      "help_en": "Prefills above this token count are chunked to keep decode fed"
     },
     {
       "key": "VLLM_PREFIX_CACHE_RETENTION_INTERVAL",
@@ -105,9 +105,9 @@
       "type": "int",
       "source": "user",
       "default": "4096",
-      "help": "SWA prefix-cache 检查点间隔（Mia #26）；默认 4096，仅在调试命中率时调整",
+      "help": "SWA prefix-cache 检查点间隔；调试命中率时才调整",
       "label_en": "Prefix-cache retention interval",
-      "help_en": "SWA prefix-cache checkpoint spacing (Mia #26); default 4096, tune only when debugging cache hits"
+      "help_en": "SWA prefix-cache checkpoint spacing; tune only when debugging cache hits"
     },
     {
       "key": "DEFAULT_THINKING",
@@ -115,9 +115,9 @@
       "type": "string",
       "source": "user",
       "default": "max",
-      "help": "默认 max（与 Mia 配方一致）；off 不生成思考（最快）；low/high/max 开启思考并控制 reasoning effort。注意 max 推理很长，需给足 max_tokens",
+      "help": "默认 max（推理很长，须给足 max_tokens）；off 不思考（最快）；请求级可覆盖",
       "label_en": "Default thinking mode",
-      "help_en": "Default max (matches the Mia recipe); off: no thinking; low/high/max: thinking with reasoning effort. max reasoning is long - size max_tokens accordingly"
+      "help_en": "Default max (reasoning can be long — size max_tokens); off: no thinking (fastest); overridable per request"
     },
     {
       "key": "LIMIT_MM_PER_PROMPT",
@@ -125,9 +125,9 @@
       "type": "int",
       "source": "user",
       "default": "8",
-      "help": "Vision-Exp 原生 image_url 每请求图片数上限（JPEG/PNG/GIF/WebP，GIF 取静帧）；仅 user 消息可带图，无视频编码器",
+      "help": "每请求图片数上限（仅 user 消息可带图；无视频）",
       "label_en": "Images per request",
-      "help_en": "Max images per request for Vision-Exp native image_url (JPEG/PNG/GIF/WebP, GIF as still frame); user messages only, no video encoder"
+      "help_en": "Max images per request (user messages only; no video)"
     },
     {
       "key": "MASTER_ADDR",
@@ -220,8 +220,8 @@
       "type": "string",
       "source": "user",
       "default": "",
-      "help": "留空（默认）= 入口脚本自动解析本地 HF 缓存中最新快照的 commit sha，离线可加载；显式设置时必须是实际分发快照的真实 commit，否则离线会 LocalEntryNotFoundError",
-      "help_en": "Empty (default) = entrypoint auto-resolves the newest cached snapshot sha so offline load works; if set, it must be the exact distributed commit or offline load fails with LocalEntryNotFoundError",
+      "help": "留空 = 自动用缓存快照 sha（离线安全）；显式填写必须是实际分发的 commit",
+      "help_en": "Empty = auto-resolve the cached snapshot sha (offline-safe); if set, must be the exact distributed commit",
       "label_en": "Official 0731 revision"
     },
     {
@@ -230,8 +230,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 跳过 6 个 v0.27 性能回移植热修复（#50312/#49486/#48407/#48957/#50298/grammar-advance）",
-      "help_en": "1 = skip the six v0.27 perf backport hotfixes",
+      "help": "1 = 跳过 6 个 v0.27 性能回移植热修复",
+      "help_en": "1 = skip the six v0.27 perf-backport hotfixes",
       "label_en": "Skip v0.27 perf backports"
     },
     {
@@ -250,8 +250,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 不应用 suppress-stops-in-reasoning 补丁（客户端 stop 可能在思考中触发）",
-      "help_en": "1 = do not apply the suppress-stops-in-reasoning patch",
+      "help": "1 = 不应用 suppress-stops-in-reasoning 补丁",
+      "help_en": "1 = skip the suppress-stops-in-reasoning patch",
       "label_en": "Skip suppress-stops fix"
     },
     {
@@ -260,7 +260,7 @@
       "type": "string",
       "source": "user",
       "default": "1",
-      "help": "1（默认）= 客户端 stop 字符串在思考阶段保持休眠，#响应 后才生效",
+      "help": "1（默认）= 思考阶段客户端 stop 字符串保持休眠",
       "help_en": "1 (default) = client stop strings stay dormant inside thinking",
       "label_en": "Suppress stops in reasoning"
     },
@@ -270,8 +270,8 @@
       "type": "int",
       "source": "user",
       "default": "1",
-      "help": "#27 热修复：并发分块 prefill 数（1-3，默认 1）。上游 #154 实测 2 会放大混合流量公平性带宽（3.72–5.14x vs 1 的 1.68–2.04x），1 为安全默认；2-3 需自行压测后显式开启",
-      "help_en": "#27 hotfix: concurrent chunked prefills (1-3, default 1). Upstream #154 measured 2 widening the mixed-traffic fairness spread (3.72-5.14x vs 1.68-2.04x at 1); 1 is the safe default, 2-3 are explicit operator opt-ins",
+      "help": "并发分块 prefill 数（1-3，默认 1）；2 及以上需自行压测后开启",
+      "help_en": "Concurrent chunked prefills (1-3, default 1); 2+ requires your own load testing",
       "label_en": "In-flight prefill cap"
     },
     {
@@ -290,8 +290,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 应用 GPU thinking_token_budget 热修复（默认 stock V2，请求发该字段会 400）",
-      "help_en": "1 = apply the GPU thinking_token_budget hotfix (stock V2 rejects the field with 400)",
+      "help": "1 = 启用 GPU thinking_token_budget（stock 下请求该字段会 400）",
+      "help_en": "1 = enable GPU thinking_token_budget (stock rejects the field with 400)",
       "label_en": "Enable thinking_token_budget"
     },
     {
@@ -300,8 +300,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 消息以 assistant 结尾时补生成头（#52），默认 stock 渲染",
-      "help_en": "1 = append a generation header for assistant-final requests (#52); default stock",
+      "help": "1 = 消息以 assistant 结尾时补生成头",
+      "help_en": "1 = append a generation header for assistant-final requests",
       "label_en": "Enable assistant-final hotfix"
     },
     {
@@ -310,8 +310,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 应用上游 vLLM #52805 XGrammar 终止回移植（#136，源锁定 fail-closed）；默认 0 不改任何字节",
-      "help_en": "1 = apply the upstream vLLM #52805 XGrammar termination backport (#136, source-locked fail-closed); default 0 changes no bytes",
+      "help": "1 = 应用 XGrammar 终止回移植修复",
+      "help_en": "1 = apply the XGrammar termination backport",
       "label_en": "Enable XGrammar termination hotfix"
     },
     {
@@ -320,8 +320,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 兼容缺少顶层 type 的 assistant output_text 单元素回放（#138，仅缺省补全，严格校验其余输入）；默认 0 保持 stock 校验",
-      "help_en": "1 = accept type-less singleton assistant output_text replay only (#138, minimal coercion, everything else stays strict); default 0 keeps stock validation",
+      "help": "1 = 兼容缺 type 的 assistant output_text 回放",
+      "help_en": "1 = accept type-less assistant output_text replay",
       "label_en": "Enable Responses history replay compat"
     },
     {
@@ -330,8 +330,8 @@
       "type": "string",
       "source": "user",
       "default": "0",
-      "help": "1 = 对超长 sparse-MLA decode 按固定 64 行分块（#141，随机 TP=2 卡死 workaround，非根因修复）；默认 0 不改任何字节",
-      "help_en": "1 = chunk oversized sparse-MLA decode calls to fixed 64-row views (#141 stochastic TP=2 stall workaround, not a root-cause fix); default 0 changes no bytes",
+      "help": "1 = sparse-MLA decode 固定 64 行分块（随机卡死 workaround）",
+      "help_en": "1 = chunk sparse-MLA decode to fixed 64-row views (stochastic-stall workaround)",
       "label_en": "Enable sparse-MLA 64-row chunking"
     },
     {
@@ -340,8 +340,8 @@
       "type": "string",
       "source": "user",
       "default": "",
-      "help": "空格分隔的 key 列表，开启 OpenAI 端点认证（之一即可）；留空 = 无认证；与 VLLM_API_KEY 同时设置会启动失败",
-      "help_en": "Space-separated API keys (any one authorizes); empty = no auth; mutually exclusive with VLLM_API_KEY",
+      "help": "空格分隔的 API key（任一即可）；留空 = 无认证；勿与 VLLM_API_KEY 同设",
+      "help_en": "Space-separated API keys (any one authorizes); empty = no auth; do not combine with VLLM_API_KEY",
       "label_en": "Multi-key API auth"
     }
   ],

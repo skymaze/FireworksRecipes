@@ -83,9 +83,9 @@
       "type": "int",
       "source": "user",
       "default": "5",
-      "help": "勿低于 checkpoint dspark_block_size(5)，否则草稿块被静默截断、解码吞吐下降",
+      "help": "勿低于 dspark_block_size(5)，否则草稿块被静默截断、吞吐下降",
       "label_en": "DSpark speculative tokens",
-      "help_en": "Keep ≥ checkpoint dspark_block_size(5); below that draft blocks are silently truncated and decode throughput drops"
+      "help_en": "Keep ≥ dspark_block_size(5); below it, draft blocks are silently truncated"
     },
     {
       "key": "COMPILATION_CONFIG",
@@ -103,7 +103,7 @@
       "type": "string",
       "source": "user",
       "default": "max",
-      "help": "off 不生成思考（最快）；low/high/max 开启思考并控制 reasoning effort；请求级参数可覆盖",
+      "help": "off 不生成思考（最快）；low/high/max 开启思考并控制 effort；请求级可覆盖",
       "label_en": "Default thinking mode",
       "help_en": "off: no thinking (fastest); low/high/max: thinking with reasoning effort; overridable per request"
     },

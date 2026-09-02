@@ -14,8 +14,8 @@
       "source": "user",
       "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0",
       "picker": "image",
-      "help": "ACR 烘焙镜像（源自 0xBakeer/qwen38-flash-next-spark recipes/llamacpp-edit/Dockerfile：CUDA 13 devel 阶段构建 llama.cpp @qwen4exp PR 035e227 + runtime 精简，仅留 llama-server/llama-cli）",
-      "help_en": "ACR-baked image (from 0xBakeer/qwen38-flash-next-spark recipes/llamacpp-edit/Dockerfile: CUDA 13 devel stage builds llama.cpp @qwen4exp PR 035e227 + slim runtime with only llama-server/llama-cli)"
+      "help": "ACR 烘焙镜像（llama.cpp @qwen4exp PR 035e227，仅含 llama-server/llama-cli）",
+      "help_en": "ACR-baked image (llama.cpp @qwen4exp PR 035e227; only llama-server/llama-cli)"
     },
     {
       "key": "QWN38_GGUF_REPO",
@@ -26,8 +26,8 @@
       "default": "unsloth/Qwen3.8-Flash-Next-GGUF",
       "required": true,
       "picker": "model",
-      "help": "unsloth GGUF 仓库：只需 UD-Q4_K_XL/* 分片（~104GiB）+ mmproj-F16.gguf（~0.9GiB，视觉投影）分发给节点 HF 缓存；勿改低比特 K-quant 求快（UD-Q3_K_XL 反而慢 14%）",
-      "help_en": "unsloth GGUF repo: only UD-Q4_K_XL/* shards (~104 GiB) + mmproj-F16.gguf (~0.9 GiB vision projector) need to reach the node HF cache; do not drop to a lower-bit K-quant for speed (UD-Q3_K_XL is 14% slower)"
+      "help": "unsloth GGUF 仓库（只需 UD-Q4_K_XL + mmproj 分发给节点缓存）；勿为提速换低比特 K-quant",
+      "help_en": "unsloth GGUF repo (only UD-Q4_K_XL + mmproj need distributing); do not drop to a lower-bit K-quant for speed"
     },
     {
       "key": "SERVED_MODEL_NAME",
@@ -52,8 +52,8 @@
       "type": "int",
       "source": "user",
       "default": "262144",
-      "help": "llama.cpp 按 PARALLEL 平分：2 槽时每请求 131,072 token，超长 400（两槽下 161K token 的 prefill 会整个失败，PARALLEL=1 恢复全窗）",
-      "help_en": "llama.cpp splits CTX across slots: at PARALLEL=2 each request gets 131,072 tokens, longer returns 400 (a 161K-token prefill fails entirely at two slots; PARALLEL=1 restores the full window)"
+      "help": "上下文（按 PARALLEL 平分：2 槽 = 131,072/请求，超长 400）",
+      "help_en": "Context (split across slots: PARALLEL=2 gives 131,072 per request, longer returns 400)"
     },
     {
       "key": "PARALLEL",
@@ -62,8 +62,8 @@
       "type": "int",
       "source": "user",
       "default": "2",
-      "help": "2（默认）= 双请求各 131,072 上下文，负载下 1.24-1.30x；1 = 恢复整窗 262,144；别拉太高（64 槽会抖动 prompt cache 丢请求）",
-      "help_en": "2 (default) = two requests at 131,072 context each, 1.24-1.30x under load; 1 = restore the full 262,144 window; don't push high (64 slots thrashes the prompt cache and loses requests)"
+      "help": "2（默认）= 两请求各半窗；1 = 整窗 262,144；别太高（64 槽丢请求）",
+      "help_en": "2 (default) = two slots at half window each; 1 = full 262,144 window; don't push high (64 slots loses requests)"
     },
     {
       "key": "SPEC",
@@ -76,8 +76,8 @@
         "ngram-mod",
         "none"
       ],
-      "help": "ngram-mod（默认）= 从 prompt 复制候选跨度的上下文投机（exact、输出字节一致；改文件 88 tok/s、自由文本 ~28）；none = 关闭",
-      "help_en": "ngram-mod (default) = context-copying speculation that lifts spans from your prompt (exact, byte-identical output; 88 tok/s on file rewrites, ~28 free-form); none = off"
+      "help": "ngram-mod（默认）= 上下文复制投机（exact，改文件 88 / 自由文本 ~28 tok/s）；none = 关",
+      "help_en": "ngram-mod (default) = context-copying speculation (exact; 88 tok/s rewrites / ~28 free-form); none = off"
     },
     {
       "key": "MMPROJ_MODE",
@@ -90,8 +90,8 @@
         "auto",
         "none"
       ],
-      "help": "auto（默认）= 缓存里有 mmproj-F16.gguf 就传 --mmproj（图像 0.967）；none = 纯文本",
-      "help_en": "auto (default) = pass --mmproj when mmproj-F16.gguf is present in the cache (0.967 vision); none = text-only"
+      "help": "auto（默认）= 有 mmproj 就开 Vision；none = 纯文本",
+      "help_en": "auto (default) = pass --mmproj when present in the cache; none = text-only"
     },
     {
       "key": "EXTRA_ARGS",

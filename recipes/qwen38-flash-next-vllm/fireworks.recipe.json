@@ -14,8 +14,8 @@
       "source": "user",
       "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.0.0",
       "picker": "image",
-      "help": "ACR 烘焙镜像（源自 blazux/qwen3.8-Flash-DGX，Apache-2.0：官方 vllm/vllm-openai:qwen38-flash-next 基底 + PLE-mmap 等 7 个补丁；dev 阶段待烘焙后配方方可发布）",
-      "help_en": "ACR-baked image (from blazux/qwen3.8-Flash-DGX, Apache-2.0: official vllm/vllm-openai:qwen38-flash-next base + 7 patches incl. PLE-mmap; dev phase — image must be baked before the recipe is publishable)"
+      "help": "ACR 烘焙镜像（blazux/qwen3.8-Flash-DGX 基底 + PLE-mmap 等 7 个补丁；dev 阶段待烘焙后发布）",
+      "help_en": "ACR-baked image (blazux/qwen3.8-Flash-DGX base + 7 patches incl. PLE-mmap; dev — bake before publishing)"
     },
     {
       "key": "QWN38_MODEL",
@@ -26,8 +26,8 @@
       "default": "RadixArk/Qwen3.8-Flash-Next-NVFP4",
       "required": true,
       "picker": "model",
-      "help": "NVFP4 checkpoint（~122GiB，保留全视觉塔 + 全部 31 个 MTP 张量）；由管理平台分发给节点 HF 缓存，按 repo id 离线解析",
-      "help_en": "NVFP4 checkpoint (~122 GiB, keeps the full vision tower + all 31 MTP tensors); distributed to the node HF cache and resolved offline by repo id"
+      "help": "NVFP4 checkpoint（~122 GiB，含全视觉塔 + 31 个 MTP 张量）",
+      "help_en": "NVFP4 checkpoint (~122 GiB, full vision tower + all 31 MTP tensors)"
     },
     {
       "key": "SERVED_MODEL_NAME",
@@ -52,8 +52,8 @@
       "type": "int",
       "source": "user",
       "default": "262144",
-      "help": "模型原生最大窗口；gmu 0.85 下 KV 池实测 641,601 token（≈2.4× 全量 262K）",
-      "help_en": "The model's native maximum window; at gmu 0.85 the KV pool measured 641,601 tokens (~2.4x a full 262K)"
+      "help": "模型原生最大窗口 262,144（gmu 0.85 下 KV 池 641,601 token）",
+      "help_en": "The model's native maximum, 262,144 (KV pool 641,601 tokens at gmu 0.85)"
     },
     {
       "key": "MAX_NUM_SEQS",
@@ -62,8 +62,8 @@
       "type": "int",
       "source": "user",
       "default": "16",
-      "help": "16 = 最后一段被良好服务的并发（TTFT <2.7s，聚合 96-109 tok/s）；批量任务可设 64（聚合 +35%、TTFT 衰减，见 README）",
-      "help_en": "16 = the last concurrency served well (TTFT <2.7s, 96-109 tok/s aggregate); raise to 64 for batch work (+35% aggregate, degraded TTFT — see README)"
+      "help": "16 = 良好服务的并发上限；批量任务可设 64（聚合 +35%、TTFT 变差）",
+      "help_en": "16 = concurrency served well; raise to 64 for batch work (+35% aggregate, worse TTFT)"
     },
     {
       "key": "MAX_NUM_BATCHED_TOKENS",
@@ -82,8 +82,8 @@
       "type": "float",
       "source": "user",
       "default": "0.85",
-      "help": "源 0.85（上游默认 0.78 时 KV 只有 227,651 token < 262,144，单条全长请求放不下）；0.85 实测 18.13 GiB KV",
-      "help_en": "Upstream 0.85 (at the upstream default 0.78 the KV pool is only 227,651 tokens — short of a single full-length request); 0.85 measured 18.13 GiB of KV"
+      "help": "0.85（上游默认 0.78 的 KV 连一条全长请求都放不下，勿回）",
+      "help_en": "0.85 (the upstream 0.78 default can't fit a single full-length request — don't revert)"
     },
     {
       "key": "MTP",
@@ -92,8 +92,8 @@
       "type": "int",
       "source": "user",
       "default": "3",
-      "help": "模型自带训练 MTP 草稿头（k=3，上游档位；>3 反而更差；0 = 关闭，用于 A/B）。只在批未饱和时有收益：单流节奏 +35%，16 并发时不可测",
-      "help_en": "The model's trained MTP draft head (k=3, the upstream tier; >3 makes it worse; 0 disables, for an A/B). Pays only while the batch is unsaturated: +35% at one caller, unmeasurable at 16 concurrent"
+      "help": "MTP 投机 k=3（>3 更差；0 = 关）；只在批未饱和时有收益",
+      "help_en": "MTP speculation k=3 (>3 is worse; 0 = off); pays only while the batch is unsaturated"
     },
     {
       "key": "PREFIX_CACHE",
@@ -102,8 +102,8 @@
       "type": "int",
       "source": "user",
       "default": "1",
-      "help": "1（默认）= --enable-prefix-caching（共享前缀聚合 +76%，多轮对话/agent 有利）；0 = 关闭，复现本仓库发布的 prefill 数字（全部在无缓存下测）",
-      "help_en": "1 (default) = --enable-prefix-caching (+76% aggregate on shared prefixes; helps multi-turn chat/agents); 0 = off, reproduces the published prefill figures (all measured cache-free)"
+      "help": "1（默认）= 前缀缓存（共享前缀 +76%）；0 = 关（复现源仓库无缓存 prefill 数字）",
+      "help_en": "1 (default) = prefix caching (+76% on shared prefixes); 0 = off (reproduces the published cache-free prefill figures)"
     },
     {
       "key": "PLE_MMAP_WORKERS",

@@ -51,9 +51,9 @@
       "type": "float",
       "source": "user",
       "default": "0.85",
-      "help": "--mem-fraction-static：为 KV/activations 预留的静态显存比例（源命令 0.85）",
+      "help": "--mem-fraction-static：静态显存占比（源 0.85）",
       "label_en": "Static memory fraction",
-      "help_en": "--mem-fraction-static: static GPU memory fraction reserved (source 0.85)"
+      "help_en": "--mem-fraction-static: static memory fraction (source 0.85)"
     },
     {
       "key": "CHUNKED_PREFILL_SIZE",
@@ -69,9 +69,9 @@
       "type": "float",
       "source": "user",
       "default": "11.01",
-      "help": "疑似错误：源命令为 11.01，但该值>1 不合理，很可能是 0.1101（即 11.01%）或 0.11 的笔误；请按 SGLang 文档/实测确认",
+      "help": "源命令 11.01 疑似笔误（比例应 ≤1），很可能是 0.1101 或 0.11；发布前核实",
       "label_en": "Mamba full memory ratio",
-      "help_en": "Suspicious: source is 11.01 but a ratio >1 is invalid; likely 0.1101 (=11.01%) or 0.11 — verify against SGLang docs/tests"
+      "help_en": "Source 11.01 is likely a typo (a ratio must be ≤1); probably 0.1101 or 0.11 — verify before publishing"
     },
     {
       "key": "HF_TOKEN",
