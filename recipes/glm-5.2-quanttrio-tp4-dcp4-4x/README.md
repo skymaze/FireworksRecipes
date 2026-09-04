@@ -33,6 +33,6 @@ GLM-5.2 QuantTrio（Int4-Int8Mix，unpruned，256 experts，315,968 上下文）
 - [joesinvestments/glm52-spark-kit](https://github.com/joesinvestments/glm52-spark-kit)：
   生产 DCP4 平台镜像与 launcher（`platform/Dockerfile`、`launch/launch_gx10.sh`、
   `docs/RECOMMENDATION.md`）
-- [lukealonso/b12x](https://github.com/lukealonso/b12x) · [vllm-project/vllm](https://github.com/vllm-project/vllm)
+- [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x) · [vllm-project/vllm](https://github.com/vllm-project/vllm)
 
 完整来源与派生关系见仓库根 [`NOTICE.md`](../../NOTICE.md)。

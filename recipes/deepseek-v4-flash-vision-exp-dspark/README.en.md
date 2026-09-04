@@ -12,9 +12,9 @@ V4 family (1M context).
   as a still frame; up to 8 per request by default, **user messages only**; **no video
   encoder** in the official weights)
 - Quant/speculation: NVFP4 DS-MLA · FlashInfer b12x + dspark speculation (k=6) · 1M context
-- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5`
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6`
   (Anemll + the Mia hotfix chain + native Vision-Exp image support; upstream snapshot
-  `d97c808ec…`)
+  `bc2ef473a1…`)
 - Served name: `deepseek-v4-flash-vision-exp`; API port defaults to `8888`
 
 ## Speed
@@ -36,8 +36,8 @@ Upstream Anemll measurements on the 1M/6 tier (results/RESULTS-2026-08-14.md):
 ## Upstream references
 
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)
-  (vision-exp · snapshot `d97c808ec1c…`, 2026-09-01)
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+  (vision-exp · upstream snapshot `bc2ef473a1…`)
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 - Upstream benches: [results/RESULTS-2026-08-14.md](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/blob/main/results/RESULTS-2026-08-14.md)
 
 Full attribution and derivations in the repo-root [`NOTICE.md`](../../NOTICE.md).

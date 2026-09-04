@@ -9,8 +9,12 @@
 - 主模型（默认）：`RedHatAI/GLM-5.3-Flash-NVFP4`（**compressed-tensors**，修复 ModelOpt
   构建的间歇性 token 损坏 vLLM #54150，drop-in、加载快 ~2×；ModelOpt 版仍可用但带损坏）
 - 草稿模型：`incoai/GLM-5.3-Flash-DFlash2`（DFlash2 k=7，必须 = block_size−1）
-- KV：**fp8_e4m3 · profiler 定池（不传 `--kv-cache-memory`）= 581,040-token 池**（上游验证；
-  ⚠️ 完全别 pin，否则激活峰值不扣、首条长 prompt 即死）
+- KV：**fp8_e4m3 · 固定 6 GiB（`--kv-cache-memory 6442450944`）= 678,661-token 池**
+  （上游 2026-09-02 launcher pin：负载下 6 次 preemption→0；⚠️ 勿高于 6 GiB——激活峰值不扣、
+  首条长 prompt 即死；留空 = profiler 定池，旧 581,040 档）
+- 投机结论（上游 09-02）：k=5 与 k=7 在 **C4 交叉**（默认仍 k=7；深并发可换 k=5 调度）；
+  **接受率上升 ≠ 吞吐**——看 mean accepted length（k=5 时 4.84→4.15）；**CUDA graph 在 TP2 平**
+  （-0.3% 聚合），保持 `--enforce-eager`
 - 上下文：**262,144（262K）**（TP=2 每 rank ~97 GiB 权重，勿上 1M；要 1M 用 4x 配方）
 - 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2`
   （与 TP4 DFlash2 配方同一镜像）

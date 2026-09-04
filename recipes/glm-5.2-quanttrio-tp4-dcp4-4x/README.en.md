@@ -35,6 +35,6 @@ Validated (2026-08-18, real 4× DGX Spark GB10, deployed end-to-end from this re
 - [joesinvestments/glm52-spark-kit](https://github.com/joesinvestments/glm52-spark-kit):
   the production DCP4 platform image and launcher (`platform/Dockerfile`,
   `launch/launch_gx10.sh`, `docs/RECOMMENDATION.md`)
-- [lukealonso/b12x](https://github.com/lukealonso/b12x) · [vllm-project/vllm](https://github.com/vllm-project/vllm)
+- [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x) · [vllm-project/vllm](https://github.com/vllm-project/vllm)
 
 Full attribution and derivations in the repo-root [`NOTICE.md`](../../NOTICE.md).

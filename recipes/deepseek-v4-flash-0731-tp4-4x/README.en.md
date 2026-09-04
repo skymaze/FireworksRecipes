@@ -26,6 +26,6 @@ No local measurements included (see the upstream benchmark in References).
 
 ## Upstream references
 
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 
 Full attribution and derivations in the repo-root [`NOTICE.md`](../../NOTICE.md).

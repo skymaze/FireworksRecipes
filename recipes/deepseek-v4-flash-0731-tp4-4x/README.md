@@ -22,6 +22,6 @@ DeepSeek-V4-Flash-0731（1M 上下文），默认参数按 agentic 工作负载�
 
 ## 参考上游
 
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 
 完整来源与派生关系见仓库根 [`NOTICE.md`](../../NOTICE.md)。

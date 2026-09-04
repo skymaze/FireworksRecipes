@@ -44,7 +44,11 @@ Measured (upstream):
 - [0xBakeer/qwen38-flash-next-spark](https://github.com/0xBakeer/qwen38-flash-next-spark)
   (MIT): serving configuration, tuning and measurements (longctx lane)
 - [blazux/qwen3.8-Flash-DGX](https://github.com/blazux/qwen3.8-Flash-DGX) (Apache-2.0):
-  the vLLM container with the 7 patches including PLE-mmap (image bake source)
+  the vLLM container this image is based on (8 patches incl. PLE-mmap and the
+  deterministic persistent_topk [@jschmied / vllm#55122] — deterministic outputs, and it
+  removes the exact-topk prefill penalty: 2,436 tok/s @8k / 2,904 @32k)
+- Deterministic top-k on by default: `VLLM_QSA_DET_TOPK=1` (`VLLM_QSA_EXACT_TOPK=1` still
+  wins; set to 0 to revert to the old path)
 - [RadixArk/Qwen3.8-Flash-Next-NVFP4](https://huggingface.co/RadixArk/Qwen3.8-Flash-Next-NVFP4) ·
   [Qwen](https://qwen.ai) (model and n-gram/PLE tech report)
 

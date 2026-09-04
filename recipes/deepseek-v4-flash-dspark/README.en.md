@@ -9,9 +9,10 @@ from Fireworks, at 1M context.
   loaded offline)
 - Quant/speculation: NVFP4 DS-MLA · FlashInfer b12x + dspark speculation (k=5) ·
   **1M context**
-- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix2`
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6`
   (Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` + the Mia fail-closed hotfix chain)
 - Served name: `deepseek-v4-flash-0731`; API port defaults to `8888`
+- Default thinking `low` (overridable per request — off/low/high/max)
 
 ## Speed
 
@@ -26,6 +27,6 @@ No local measurements included (see the upstream benchmark in References).
 ## Upstream references
 
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 
 Full attribution and derivations in the repo-root [`NOTICE.md`](../../NOTICE.md).

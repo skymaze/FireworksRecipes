@@ -38,7 +38,11 @@
 - [0xBakeer/qwen38-flash-next-spark](https://github.com/0xBakeer/qwen38-flash-next-spark)
   （MIT）：服务配置、调参与实测数字来源（longctx 路线）
 - [blazux/qwen3.8-Flash-DGX](https://github.com/blazux/qwen3.8-Flash-DGX)（Apache-2.0）：
-  含 PLE-mmap 等 7 个补丁的 vLLM 容器（镜像烘焙来源）
+  本镜像的 vLLM 容器来源（PLE-mmap 等 8 个补丁，incl. deterministic persistent_topk
+  [@jschmied / vllm#55122]——输出确定性，并消除 exact-topk 的 prefill 惩罚：8K 2,436 /
+  32K 2,904 tok/s）
+- 确定性 topk 默认开：`VLLM_QSA_DET_TOPK=1`（`VLLM_QSA_EXACT_TOPK=1` 优先级更高，置 0
+  回退旧路径）
 - [RadixArk/Qwen3.8-Flash-Next-NVFP4](https://huggingface.co/RadixArk/Qwen3.8-Flash-Next-NVFP4) ·
   [Qwen](https://qwen.ai)（模型与 n-gram/PLE 技术报告）
 
