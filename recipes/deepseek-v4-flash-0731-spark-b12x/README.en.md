@@ -26,6 +26,6 @@ No local measurements included (this lane is not hardware-validated yet).
 ## Upstream references
 
 - `eugr/spark-vllm-b12x:latest`: distribution image (from the source docker run)
-- [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+- [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 
 Full attribution and derivations in the repo-root [`NOTICE.md`](../../NOTICE.md).

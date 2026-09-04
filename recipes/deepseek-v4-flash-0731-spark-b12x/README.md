@@ -26,6 +26,6 @@ DeepSeek-V4-Flash-0731（1M 上下文）。
 ## 参考上游
 
 - `eugr/spark-vllm-b12x:latest`：分发镜像（源 docker run 引用）
-- [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+- [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 
 完整来源与派生关系见仓库根 [`NOTICE.md`](../../NOTICE.md)。

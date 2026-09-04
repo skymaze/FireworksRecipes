@@ -11,9 +11,14 @@ proven-&-reproducible tier ("This is the config to copy").
   intermittent token corruption of the ModelOpt builds, vLLM #54150; drop-in, loads ~2×
   faster; ModelOpt builds remain usable but corrupted)
 - Draft model: `incoai/GLM-5.3-Flash-DFlash2` (DFlash2 k=7 — must equal block_size−1)
-- KV: **fp8_e4m3 · profiler-sized pool (no `--kv-cache-memory`) = 581,040 tokens**
-  (upstream-verified; ⚠️ never pin — the activation peak is not deducted and the first long
-  prompt kills the engine)
+- KV: **fp8_e4m3 · pinned 6 GiB (`--kv-cache-memory 6442450944`) = 678,661-token pool**
+  (upstream 2026-09-02 launcher pin: 6 preemptions → 0 under load; ⚠️ never go above 6 GiB —
+  the activation peak is not deducted and the first long prompt kills the engine; empty =
+  profiler-sized, the old 581,040 tier)
+- Speculation findings (upstream 09-02): k=5 inverts vs k=7 at **C4** (default stays k=7; deep
+  concurrency can swap in a k=5 schedule); **a higher acceptance RATIO is not throughput** —
+  track the mean accepted length (fell 4.84→4.15 at k=5); **CUDA graphs are flat on TP2**
+  (−0.3% aggregate), so keep `--enforce-eager`
 - Context: **262,144 (262K)** (TP=2 carries ~97 GiB weights/rank — no 1M here; use the 4x
   recipe for 1M)
 - Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2`

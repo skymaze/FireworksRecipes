@@ -13,10 +13,19 @@ speculation**, **1M context, 3,895,606-token KV pool (3.72× a full 1M request)*
 - Draft model: `incoai/GLM-5.3-Flash-DFlash2` (2.34 GB; k=7 must equal block_size−1; the
   drafter layers slot-share the MLA tensors — **~zero KV-pool cost**)
 - KV/shapes: **fp8_e4m3 · 24 GiB per rank = 3,895,606-token pool** (`--block-size 2304`,
-  gmu 0.85, `--max-num-seqs 6`, `--max-num-batched-tokens 8192`)
+  gmu 0.85, **`--max-num-seqs 64`, `--max-num-batched-tokens 16384`**)
+- CUDA graphs: **FULL_AND_PIECEWISE** (`--compilation-config`; 09-02 correction on the
+  marlin lane — faster than `--enforce-eager`; the earlier "keep eager" advice measured the
+  wrong plain-PIECEWISE mode; **only the topkfix image must run eager**)
 - Context: **1,048,576 (1M)**; API port `8000`
 - Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2`
-  (ACR; nine-layer patch stack + DFlash2 overlay + SM121 indexer module baked in)
+  (ACR; nine-layer patch stack + DFlash2 overlay + SM121 indexer module included)
+- DFlash2 top-k oversubscription fix (upstream #3: exact `torch.topk` routing, vLLM #49897
+  route): an image is available as `glm53-flash-sm121:v11-dflash2-topkfix`. That image
+  **must run `--enforce-eager`** (it deadlocks under CUDA graphs) and clears the
+  oversubscription crash at high concurrency; **this recipe's default stays on
+  `v11-dflash2` + FULL_AND_PIECEWISE** — to switch lanes, point `GLM53_IMAGE` at the
+  topkfix tag and drop `--compilation-config`
 
 ## Speed
 
@@ -28,6 +37,11 @@ Measured (upstream gate suite, 2026-08-29, warmed):
 - **4,141.8 tok/s prefill** (warmed; cold first prefill ~467 tok/s due to kernel JIT)
 - Gate: 2× ~41K deep decodes + 3× concurrent 32,879-token prefills + vision + `/health`
   200 throughout; residual head 15 GiB, workers 19–20 GiB
+- **09-02 speed run** (upstream production fleet, FULL_AND_PIECEWISE): `--max-num-seqs`
+  6→64 lifted aggregate **183→503 tok/s (+175%)** (still climbing monotonically at 64);
+  `--max-num-batched-tokens` 8192→16384: 114K prefill **1194→1863 tok/s (+56%)**, TTFT
+  95→61 s (−36%); switching to FULL_AND_PIECEWISE again → aggregate **~530 tok/s**
+  (count-to-100 101.6→105.6, code 72.0→77.3, prose 26.9→31.5)
 
 ## Hardware requirements
 
@@ -42,8 +56,10 @@ Measured (upstream gate suite, 2026-08-29, warmed):
 
 - [tonyd2wild/GLM-5.3-Flash-NVFP4-1M-KV-4x-DGX-Spark](https://github.com/tonyd2wild/GLM-5.3-Flash-NVFP4-1M-KV-4x-DGX-Spark):
   the source deployment (upstream current default): `launch-glm53-tp4-24g.sh`,
-  `flusher-unconditional.sh`, `fleet_watchdog.sh`, the `docker/` patch stack,
-  `overlay-dflash2/`, the gate-suite docs
+  `launch-glm53-tp4-dflash2-topkfix.sh`, `flusher-unconditional.sh`, `fleet_watchdog.sh`,
+  the `docker/` patch stack, `overlay-dflash2/`, the gate-suite docs,
+  `docs/TOPK-OVERSUSCRIPTION-FIX.md` (topkfix overlay — separate image tag),
+  `docs/SPEED-RUN-2026-08-31.md` (09-02 speed run)
 - [RedHatAI/GLM-5.3-Flash-NVFP4](https://huggingface.co/RedHatAI/GLM-5.3-Flash-NVFP4) ·
   [incoai/GLM-5.3-Flash-DFlash2](https://huggingface.co/incoai/GLM-5.3-Flash-DFlash2) ·
   [vllm-project/vllm](https://github.com/vllm-project/vllm)

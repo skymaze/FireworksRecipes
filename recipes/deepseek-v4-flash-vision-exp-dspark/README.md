@@ -10,8 +10,8 @@ DeepSeek-V4-Flash-**Vision-Exp**（DeepSeek V4 家族首个实验多模态模型
 - 多模态：原生**图片输入**（OpenAI `image_url`，JPEG/PNG/GIF/WebP；GIF 取静帧；每请求
   默认 ≤ 8 张，**仅 user 消息可带图**；官方权重**无视频编码器**）
 - 量化/投机：NVFP4 DS-MLA · FlashInfer b12x + dspark 投机（k=6）· 1M 上下文
-- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix5`
-  （Anemll + Mia 热修复链 + Vision-Exp 原生图片支持，上游快照 `d97c808ec…`）
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6`
+  （Anemll + Mia 热修复链 + Vision-Exp 原生图片支持，上游快照 `bc2ef473a1…`）
 - 对外服务名：`deepseek-v4-flash-vision-exp`；API 端口默认 `8888`
 
 ## 速度
@@ -32,8 +32,8 @@ DeepSeek-V4-Flash-**Vision-Exp**（DeepSeek V4 家族首个实验多模态模型
 ## 参考上游
 
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)
-  （vision-exp · 快照 `d97c808ec1c…`，2026-09-01）
-- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [lukealonso/b12x](https://github.com/lukealonso/b12x)
+  （vision-exp · 上游快照 `bc2ef473a1…`）
+- [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 - 上游实测数据：[results/RESULTS-2026-08-14.md](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/blob/main/results/RESULTS-2026-08-14.md)
 
 完整来源与派生关系见仓库根 [`NOTICE.md`](../../NOTICE.md)。
