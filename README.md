@@ -17,9 +17,7 @@
 | [DeepSeek-V4-Flash-Vision-Exp (DSpark)](recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6` | **双节点 TP=2**（多模态）· **原生图片输入**（OpenAI image_url ≤8 张 / 仅 user 消息 / 无视频 · 含上游 #168/#176/#179 vision 修复）· FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · **1M 上下文**（dev：镜像就绪 hotfix6，checkpoint 待实机验证） |
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
 | DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
-| Qwen3.8-27B (SGLang DSPARK) | `lmsysorg/sglang:qwen38-27b` | **单节点** SGLang 服务 · flashinfer + DSPARK 投机（mamba 草稿）· **FP8 KV** · `--mamba-full-memory-ratio 11.01`（疑似笔误，待验证） |
-| [Qwen3.8-Flash-Next (vLLM)](recipes/qwen38-flash-next-vllm/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.1.0` | **单节点**（176.9B）· **51.2B n-gram/PLE 查找表由 NVMe 流式加载**（PLE-mmap 补丁镜像 · deterministic topk，`VLLM_QSA_DET_TOPK=1` 默认开）· MTP k=3 训练草稿头投机 · 前缀缓存默认开 · **262K 上下文** · 多模态 0.967 · ~32 tok/s（源自 0xBakeer longctx 路线） |
-| [Qwen3.8-Flash-Next Edit (llama.cpp)](recipes/qwen38-flash-next-edit/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next-edit:v1.0.0` | **单节点** llama.cpp 编程编辑路线（镜像就绪）· **51.2B n-gram/PLE 查找表由 NVMe 页缓存流式加载** · unsloth GGUF UD-Q4_K_XL · ngram-mod 上下文复制投机（exact，改文件 88 tok/s）· f16 KV · **262K 上下文** · mmproj 多模态 0.967（源自 0xBakeer edit 路线） |
+| [Qwen3.8-Flash-Next (单节点 TP=1 · MiaAI-Lab)](recipes/qwen38-flash-next-single-dgx-spark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0` | **单节点 TP=1**（176.9B · Mia-AiLab NVFP4 ~99 GB）· **26.82 GiB n-gram/PLE 查找表由 NVMe 内存映射离载**（`VLLM_PLE_CPU_OFFLOAD=1` + MADV_RANDOM + PLE prefetch，每 token 磁盘读 1,366→57 KiB）· MTP k=3 + **reduced-vocabulary drafting**（MTP_DRAFT_VOCAB，decode +25%）· **FP8 KV**（≈1.85× 池）· **262K 原生上下文 / 512K YaRN 可选** · 宿主侧封顶预算（GMU 0.78）· 推理默认开 · 图片/视频多模态 · decode 单流 ~46.3 tok/s（4 流聚合 108.1）· prefill 峰值 ~2,265 tok/s @32k（源自 MiaAI-Lab 单机仓库） |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **双节点 TP=2** · fp8 KV + **DFlash2**（incoai drafter）· **262K 上下文** · 单流 46.9 tok/s · C1–C6 零失败（上游 one-to-copy 档）· KV 固定 6 GiB（678,661-token 池，09-02 pin）· `--enforce-eager` · 默认 RedHatAI checkpoint |
 | GLM-5.3-Flash (DFlash2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **四节点 TP=4**（上游当前默认）· fp8 KV + **DFlash2** k=7 块扩散投机（incoai drafter，KV 池成本 ~0）· **1M 上下文** · **3.9M-token KV 池**（24 GiB/rank，需无条件 flusher）· 聚合 ~503–530 tok/s（09-02 提速：max-num-seqs 64 / mnbt 16384 / FULL_AND_PIECEWISE）· 默认 RedHatAI checkpoint |
@@ -88,9 +86,7 @@ FireworksRecipes/
 │   ├── deepseek-v4-flash-0731-spark-b12x/   # 2 节点 TP=2 · eugr/spark-vllm-b12x（源自 docker run，未实机验证）
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
-│   ├── qwen38-27b-sglang-dspark/   # 单节点 · SGLang + DSPARK（源自 docker run，未实机验证）
-│   ├── qwen38-flash-next-vllm/   # 单节点 · vLLM（PLE 表 NVMe 流式 + MTP，源自 0xBakeer longctx）
-│   ├── qwen38-flash-next-edit/   # 单节点 · llama.cpp 编辑路线（PLE 表 NVMe 页缓存 + ngram-mod，源自 0xBakeer edit）
+│   ├── qwen38-flash-next-single-dgx-spark/   # 单节点 TP=1 · vLLM（PLE 表 NVMe 离载 + MTP，源自 MiaAI-Lab 单机仓库）
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
 │   └── glm-5.2-quanttrio-tp4-dcp4-4x/   # 4 节点 TP=4 + DCP4 · spark-kit 生产栈（镜像构建推送至 ACR）
@@ -157,4 +153,4 @@ python3 scripts/validate.py
 - [jvr0x/dgx-spark-bench](https://github.com/jvr0x/dgx-spark-bench)：1M/NVFP4 双节点配方参考
 - [tonyd2wild/DeepSeek-v4-Flash-Vision-Exp-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-Vision-Exp-DSpark-1M-NVFP4-KV-2x-DGX-Spark)：1M/NVFP4 双节点配方参考
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)：DSpark 双节点配方路线参考
-- [0xBakeer/qwen38-flash-next-spark](https://github.com/0xBakeer/qwen38-flash-next-spark)：单节点 Qwen3.8-Flash-Next（longctx vLLM 路线）配方参考
+- [MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark](https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark)：单节点 Qwen3.8-Flash-Next（TP=1 vLLM · PLE 表 NVMe 离载 · 262k/512k YaRN 路线）配方参考

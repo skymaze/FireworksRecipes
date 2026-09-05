@@ -1,0 +1,205 @@
+{
+  "name": "Qwen3.8-Flash-Next（单节点 TP=1 · MiaAI-Lab）",
+  "name_en": "Qwen3.8-Flash-Next (single-node TP=1 · MiaAI-Lab)",
+  "description": "Qwen3.8-Flash-Next（176.9B，Mia-AiLab NVFP4 checkpoint ~99 GB）单节点 TP=1 vLLM 服务（1× DGX Spark）：26.82 GiB n-gram/PLE 查找表由 NVMe 内存映射离载（VLLM_PLE_CPU_OFFLOAD=1 + MADV_RANDOM + POSIX_FADV prefetch，每 token 磁盘读 1,366→57 KiB）、MTP 训练草稿 k=3 投机 + 可选 reduced-vocabulary drafting（MTP_DRAFT_VOCAB，最大 +25% decode）、FP8 KV（≈1.85× KV 池）、262,144 原生上下文（YARN=1 → 524,288 YaRN）、推理默认开（reasoning 字段单独返回、可每请求关）、OpenAI API + 图片/视频多模态；宿主侧 HOST_RESERVE_GIB=26 封顶 GPU 预算（GMU 0.78）；sparkDash 实测 decode 单流 ~46.3 tok/s（4 流聚合 108.1）、prefill 峰值 ~2,265 tok/s @32k。源自 MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark（AGPL-3.0 配方参考）。",
+  "description_en": "Single-node TP=1 vLLM serving for Qwen3.8-Flash-Next (176.9B, Mia-AiLab NVFP4 checkpoint ~99 GB) on one DGX Spark: the 26.82 GiB n-gram/PLE lookup table is offloaded and memory-mapped from NVMe (VLLM_PLE_CPU_OFFLOAD=1 + MADV_RANDOM + POSIX_FADV prefetch, 1,366 -> 57 KiB disk read per token), MTP trained-draft k=3 speculation with optional reduced-vocabulary drafting (MTP_DRAFT_VOCAB, up to +25% decode), FP8 KV (~1.85x KV pool), 262,144 native context (YARN=1 -> 524,288 YaRN), reasoning on by default (separate reasoning field, disable per request), OpenAI API with image/video multimodal; host-side HOST_RESERVE_GIB=26 caps the GPU budget (GMU 0.78); measured with sparkDash - decode ~46.3 tok/s single-stream (108.1 aggregate at 4 streams), prefill peak ~2,265 tok/s @32k. Ported from MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark (AGPL-3.0 reference).",
+  "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0",
+  "version": "1.2.0",
+  "nodes": 1,
+  "compose_template": "services:\n  vllm-qwen38fn1:\n    image: ${VLLM_IMAGE:-registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0}\n    container_name: ${TASK_NAME}-qwen38fn1\n    healthcheck:\n      test: [\"CMD\", \"python3\", \"-c\", \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:${PORT:-8888}/health', timeout=5).status == 200 else 1)\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 900s\n    pull_policy: if_not_present\n    entrypoint: []\n    network_mode: host\n    ipc: host\n    shm_size: \"32gb\"\n    ulimits:\n      memlock: -1\n      stack: 67108864\n    gpus: all\n    volumes:\n      # 宿主 HF 缓存挂到 /hf（HF_HOME=/hf，模型由管理平台分发到节点缓存，离线解析）\n      - ${HF_CACHE:-${HOME}/.cache/huggingface}:/hf\n      # PLE 打包表所在宿主目录（首启前须构建好，容器内按 repo id 解析，见 README）\n      - ${VLLM_CACHE:-${HOME}/.cache/vllm}:/root/.cache/vllm\n    environment:\n      HF_HOME: /hf\n      HF_HUB_OFFLINE: \"1\"  # 模型由管理平台分发到节点缓存，固定离线加载\n      HF_HUB_DISABLE_XET: \"${HF_HUB_DISABLE_XET:-1}\"\n      HF_TOKEN: \"${HF_TOKEN:-}\"\n      TRANSFORMERS_OFFLINE: \"1\"\n      # PLE 表 CPU 离载（本配方成立的核心开关；TP=1 下勿关——99 GB 权重过 UVM 会挂主机）\n      VLLM_PLE_CPU_OFFLOAD: \"1\"\n      VLLM_PLE_OFFLOAD_STEP_TIMEOUT: \"${PLE_STEP_TIMEOUT:-300}\"\n    command:\n      - bash\n      - -lc\n      - >\n        set -e;\n        PLE_ORG=${QWN38_MODEL:-Mia-AiLab/Qwen3.8-Flash-Next-NVFP4};\n        PLE_NAME=$(printf %s \"$PLE_ORG\" | sed 's|/|--|g');\n        PLE_DIR=\"/root/.cache/vllm/ple_cache/$PLE_NAME\";\n        if ! ls \"$PLE_DIR\"/*.packed_u8 >/dev/null 2>&1; then\n          echo \"PLE packed table missing: host ~/.cache/vllm/ple_cache/$PLE_NAME (build it once, see README)\"; exit 1;\n        fi;\n        VLLM_ARGS=();\n        CTX=${MAX_MODEL_LEN:-262144};\n        if [ \"${YARN:-0}\" = \"1\" ]; then\n          CTX=${YARN_MAX_MODEL_LEN:-524288};\n          VLLM_ARGS+=(--hf-overrides);\n          VLLM_ARGS+=('{\"text_config\":{\"rope_parameters\":{\"rope_type\":\"yarn\",\"factor\":2.0,\"original_max_position_embeddings\":262144}}}');\n        elif [ \"$CTX\" -gt 262144 ]; then\n          echo \"MAX_MODEL_LEN > 262144 需 YARN=1（YaRN rope）；请下调或设 YARN=1\"; exit 1;\n        fi;\n        if [ \"${MTP:-3}\" != \"0\" ]; then\n          CG_SIZES=[];\n          if [ \"${CUDAGRAPH_CAPTURE_SIZES:-auto}\" = \"auto\" ]; then\n            CG_SIZES=\"$(python3 -c \"print(','.join(str((1+${MTP:-3})*s) for s in range(1,${MAX_NUM_SEQS:-4}+1)))\")\";\n          else\n            CG_SIZES=${CUDAGRAPH_CAPTURE_SIZES};\n          fi;\n          VLLM_ARGS+=(--speculative-config);\n          VLLM_ARGS+=(\"{\\\"method\\\":\\\"mtp\\\",\\\"num_speculative_tokens\\\":${MTP:-3},\\\"use_local_argmax_reduction\\\":$( [ -n \"${MTP_DRAFT_VOCAB:-}\" ] && echo true || echo false),\\\"model\\\":\\\"${QWN38_MODEL:-Mia-AiLab/Qwen3.8-Flash-Next-NVFP4}\\\"}\");\n          VLLM_ARGS+=(--compilation-config);\n          VLLM_ARGS+=(\"{\\\"mode\\\":0,\\\"cudagraph_mode\\\":\\\"${CUDAGRAPH_MODE:-FULL_DECODE_ONLY}\\\",\\\"cudagraph_capture_sizes\\\":[${CG_SIZES}]}\");\n        fi;\n        exec vllm serve \"$PLE_ORG\"\n        --served-model-name ${SERVED_MODEL_NAME:-qwen3.8-flash-next}\n        --tensor-parallel-size 1\n        --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.78}\n        --max-num-seqs ${MAX_NUM_SEQS:-4}\n        --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-2048}\n        --max-model-len $CTX\n        --kv-cache-dtype ${KV_CACHE_DTYPE:-fp8}\n        \"${VLLM_ARGS[@]}\"\n        --load-format safetensors\n        --safetensors-load-strategy lazy\n        --enable-chunked-prefill\n        --reasoning-parser qwen3\n        --enable-auto-tool-choice\n        --tool-call-parser qwen3_coder\n        --distributed-executor-backend mp\n        --host 0.0.0.0\n        --port ${PORT:-8888}\n",
+  "variables": [
+    {
+      "key": "VLLM_IMAGE",
+      "label": "vLLM 镜像",
+      "label_en": "vLLM image",
+      "type": "string",
+      "source": "user",
+      "default": "registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0",
+      "picker": "image",
+      "help": "ACR 烘焙镜像（官方基镜像 vllm/vllm-openai:qwen38-flash-next + MiaAI 五项补丁：PLE layer prefetch、PLE offload 宿主握手、MTP draft vocab、ModelOpt MXFP8 回退、QSA FP8-KV）。源仓库在启动时改写容器内文件，Fireworks 一键部署用本烘焙镜像即可；换回官方原镜像会 PLE 离载死锁、FP8 KV 不可用。",
+      "help_en": "ACR-baked image (official vllm/vllm-openai:qwen38-flash-next base + all five MiaAI patches: PLE-layer prefetch, PLE offload host handshake, MTP draft vocab, ModelOpt MXFP8 fallback, QSA FP8-KV). The source repo rewrites vLLM files at launch; one-click Fireworks deploy uses this baked image. Stock image deadlocks PLE offload and breaks FP8 KV."
+    },
+    {
+      "key": "QWN38_MODEL",
+      "label": "模型",
+      "label_en": "Model",
+      "type": "string",
+      "source": "user",
+      "default": "Mia-AiLab/Qwen3.8-Flash-Next-NVFP4",
+      "required": true,
+      "picker": "model",
+      "help": "Mia-AiLab NVFP4 checkpoint（磁盘 ~99 GB；26.82 GiB 为 PLE 查找表，由 NVMe mmap 离载）。需已分发到节点 HF 缓存。",
+      "help_en": "Mia-AiLab NVFP4 checkpoint (~99 GB on disk; 26.82 GiB is the PLE lookup table, mmap-offloaded from NVMe). Must be distributed to the node HF cache."
+    },
+    {
+      "key": "MTP_DRAFT_VOCAB",
+      "label": "MTP 精简草稿词表（宿主文件路径）",
+      "label_en": "MTP reduced draft vocab (host file path)",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "空 = 不开（drafter 全 248,320 词表）；填宿主一行一个 token id 的文件（用源 build_draft_vocab.py 从模型自身语料生成，256k 档 65,536 行 ≈ 0.16 GiB），drafter 只对子集 argmax——目标模型逐 token 校验，不改输出，decode +25%（单流最大提升）。",
+      "help_en": "Empty = off (full 248,320-vocab drafter); set a host path to a token-id-per-line file (build with the upstream build_draft_vocab.py; 65,536 rows at 256k tier ~0.16 GiB) so the drafter argmaxes over the subset only - the target model verifies every token, output unchanged, decode +25% (the largest single-stream win)."
+    },
+    {
+      "key": "SERVED_MODEL_NAME",
+      "label": "对外服务名",
+      "label_en": "Served model name",
+      "type": "string",
+      "source": "user",
+      "default": "qwen3.8-flash-next"
+    },
+    {
+      "key": "PORT",
+      "label": "服务端口",
+      "label_en": "Serving port",
+      "type": "int",
+      "source": "user",
+      "default": "8888",
+      "help": "源默认 8888——但 comfy-h3.service 会轮询 127.0.0.1:8888 并拉起 ComfyUI（GPU 共租者）：该服务在用时 8888 会触发它与本服务抢 GPU，须先 disable 之或用其它端口（如 8890）。",
+      "help_en": "Upstream default 8888 - but comfy-h3.service polls 127.0.0.1:8888 and launches ComfyUI (a GPU co-tenant): while active it would contend for GPU if served on 8888. Disable that service first or use another port (e.g. 8890)."
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "label": "上下文长度（YARN=0）",
+      "label_en": "Context length (YARN=0)",
+      "type": "int",
+      "source": "user",
+      "default": "262144",
+      "help": "YARN=0 时服务的上下文；原生上限 262,144，超过会被拒（设 YARN=1 走 YaRN）。",
+      "help_en": "Context served at YARN=0; the native cap is 262,144, anything above is refused (set YARN=1 for YaRN)."
+    },
+    {
+      "key": "YARN",
+      "label": "YaRN 长上下文",
+      "label_en": "YaRN long context",
+      "type": "select",
+      "source": "user",
+      "default": "0",
+      "options": [
+        "0",
+        "1"
+      ],
+      "help": "0（默认）= 原生 rope（用 MAX_MODEL_LEN）；1 = YaRN rope → 服务 YARN_MAX_MODEL_LEN（factor 2.0 → 512k）。长窗换一点短上下文精度，非 512k 需求勿开。",
+      "help_en": "0 (default) = native rope (uses MAX_MODEL_LEN); 1 = YaRN rope, serves YARN_MAX_MODEL_LEN (factor 2.0 -> 512k). YaRN trades some short-context accuracy; leave off unless you need > 262k."
+    },
+    {
+      "key": "YARN_MAX_MODEL_LEN",
+      "label": "YaRN 上下文长度",
+      "label_en": "YaRN context length",
+      "type": "int",
+      "source": "user",
+      "default": "524288",
+      "help": "YARN=1 时服务的长度；仅 524,288 经源仓库验证——1M 需 ~28.8 GiB KV（BF16）会冲破单机预算，切勿抬到 1M。",
+      "help_en": "Length served at YARN=1; only 524,288 is validated upstream - 1M needs ~28.8 GiB KV (BF16) and blows the single-Spark budget, so do not push to 1M."
+    },
+    {
+      "key": "KV_CACHE_DTYPE",
+      "label": "KV 缓存精度",
+      "label_en": "KV cache dtype",
+      "type": "select",
+      "source": "user",
+      "default": "fp8",
+      "options": [
+        "fp8",
+        "auto"
+      ],
+      "help": "fp8（默认）= 主 KV 用 fp8-e4m3，池 ≈1.85×（12 层全注意力压缩 ~84% 字节；QSA 侧/compressor 仍 BF16）→ 512k 下 2.73× 满请求；代价小：#32k prefill −6.1%、#400k −2.7%、decode −4%，推理套件 11/11。auto = BF16。需镜像含 QSA FP8-KV 补丁。",
+      "help_en": "fp8 (default) = main KV in fp8-e4m3, ~1.85x pool (only the 12 full-attention layers shrink ~84% of bytes; QSA side/compressor stay BF16) -> 2.73x a full request at 512k; small cost: -6.1% prefill @32k, -2.7% @400k, -4% decode, 11/11 reasoning suite. auto = BF16. Requires the QSA FP8-KV patch in the image."
+    },
+    {
+      "key": "GPU_MEMORY_UTILIZATION",
+      "label": "GPU 显存利用率",
+      "label_en": "GPU memory utilization",
+      "type": "float",
+      "source": "user",
+      "default": "0.78",
+      "help": "上游 09-05 起宿主侧封顶预算：GMU × MemTotal ≤ MemTotal − HOST_RESERVE_GIB(26)。shipped 档源码按取整推导出 GMU 0.78（GPU 94.87 GiB → fp8 KV ~16.46 GiB = 992,584-token 池，3.79× 满 262k 请求）。调高须同时按源的安全规则留宿主余量（MemAvailable ≥ ~10 GiB），耗尽统一内存会挂内核。",
+      "help_en": "Upstream 09-05 hosts the budget from the host side: GMU x MemTotal <= MemTotal - HOST_RESERVE_GIB(26). The shipped profile derives GMU 0.78 (94.87 GiB to the GPU -> ~16.46 GiB fp8 KV = 992,584-token pool, 3.79x a full 262k request). Raising it must keep host MemAvailable >= ~10 GiB per the upstream safety rules; exhausting the unified pool hangs the kernel."
+    },
+    {
+      "key": "MAX_NUM_SEQS",
+      "label": "最大并发序列数",
+      "label_en": "Max concurrent sequences",
+      "type": "int",
+      "source": "user",
+      "default": "4",
+      "help": "源已测 1/2/3/4 流：单流 ~46.3 tok/s，4 流聚合 ~108.1 tok/s；KV 池 3.79× 满 262k 请求，长上下文是并发上限而非吞吐旋钮（短上下文聚合到 8 流 ~114 tok/s）。",
+      "help_en": "Measured at 1/2/3/4 streams upstream: ~46.3 tok/s single-stream, ~108.1 tok/s aggregate at 4. The KV pool holds 3.79x a full 262k request, so this is the long-context limit, not a throughput knob (aggregate keeps rising to ~114 at 8 streams on short contexts)."
+    },
+    {
+      "key": "MAX_NUM_BATCHED_TOKENS",
+      "label": "单批最大 token 数",
+      "label_en": "Max batched tokens",
+      "type": "int",
+      "source": "user",
+      "default": "2048",
+      "help": "源默认 2048；chunked prefill 已开。抬 8192 买 ~11% prefill / ~10% TTFT，代价 ~3% KV 池，先读源 README prefill 表。",
+      "help_en": "Upstream default 2048; chunked prefill is on. Raising to 8192 buys ~11% prefill and ~10% TTFT out of ~3% of the KV pool; read the upstream README prefill table first."
+    },
+    {
+      "key": "CUDAGRAPH_CAPTURE_SIZES",
+      "label": "CUDA Graph 捕获规格",
+      "label_en": "CUDA-graph capture sizes",
+      "type": "string",
+      "source": "user",
+      "default": "auto",
+      "help": "auto（默认）= 源随 .env 的每批可构建宽度 (1+K)×S for S∈1..MAX_NUM_SEQS ——vLLM 自带列表在 MTP=3 会漏 3/5 序列批(PAD/无图)；逗号列表显式指定；空 = vLLM 默认。",
+      "help_en": "auto (default, upstream .env) = every verify-batch width (1+K)xS for S in 1..MAX_NUM_SEQS - vLLM's own list misses 3/5-sequence batches at MTP=3 (padded/eager); a comma list sets them explicitly; empty = the vLLM default."
+    },
+    {
+      "key": "MTP",
+      "label": "MTP 投机 token 数",
+      "label_en": "MTP speculative tokens",
+      "type": "int",
+      "source": "user",
+      "default": "3",
+      "help": "MTP 训练草稿头 k=3（0 = 关，省 ~1.49 GiB）；多模态请求自动回退到非投机（草稿模型吃不了多模态嵌入），文本请求不受影响。",
+      "help_en": "MTP trained-draft speculation k=3 (0 = off, saves ~1.49 GiB); multimodal requests automatically fall back to non-speculative (the draft model cannot take embeddings), text requests are unaffected."
+    },
+    {
+      "key": "CUDAGRAPH_MODE",
+      "label": "CUDA Graph 模式",
+      "label_en": "CUDA graph mode",
+      "type": "select",
+      "source": "user",
+      "default": "FULL_DECODE_ONLY",
+      "options": [
+        "FULL_DECODE_ONLY",
+        "NONE"
+      ],
+      "help": "FULL_DECODE_ONLY（默认）；NONE = eager 调试用。",
+      "help_en": "FULL_DECODE_ONLY (default); NONE for eager debugging."
+    },
+    {
+      "key": "VLLM_CACHE",
+      "label": "PLE 打包表宿主目录",
+      "label_en": "PLE packed-table host dir",
+      "type": "string",
+      "source": "user",
+      "default": "${HOME}/.cache/vllm",
+      "help": "封装 PLE 表的宿主目录（挂到容器 /root/.cache/vllm）。发布前须在宿主先构建好 <org>--<name>/*.packed_u8（源 build_ple_packed_table.py，一次性 ~27 GB），容器启动会检查，缺则退出。",
+      "help_en": "Host dir holding the packed PLE table (mounted to /root/.cache/vllm). Output must be built once on the host before publish (<org>--<name>/*.packed_u8, via the upstream build_ple_packed_table.py, one-time ~27 GB); the container checks for it and exits if missing."
+    },
+    {
+      "key": "PLE_STEP_TIMEOUT",
+      "label": "PLE 离载步超时",
+      "label_en": "PLE offload step timeout",
+      "type": "int",
+      "source": "user",
+      "default": "300",
+      "help": "VLLM_PLE_OFFLOAD_STEP_TIMEOUT（源 300 s）。",
+      "help_en": "VLLM_PLE_OFFLOAD_STEP_TIMEOUT (upstream 300 s)."
+    },
+    {
+      "key": "HF_TOKEN",
+      "label": "HuggingFace Token",
+      "label_en": "HuggingFace token",
+      "type": "string",
+      "source": "user",
+      "default": "",
+      "help": "受 gating 的模型授权 token；模型已由管理平台分发到缓存时通常可留空。",
+      "help_en": "Auth token for gated models; usually empty when the model is pre-distributed to the cache."
+    }
+  ]
+}
