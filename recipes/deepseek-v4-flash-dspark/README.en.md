@@ -9,10 +9,28 @@ from Fireworks, at 1M context.
   loaded offline)
 - Quant/speculation: NVFP4 DS-MLA · FlashInfer b12x + dspark speculation (k=5) ·
   **1M context**
-- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6`
-  (Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` + the Mia fail-closed hotfix chain)
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7`
+  (Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` + Mia fail-closed hotfix chain, upstream snapshot
+  `957890ac…` 2026-09-06)
 - Served name: `deepseek-v4-flash-0731`; API port defaults to `8888`
 - Default thinking `low` (overridable per request — off/low/high/max)
+
+## New opt-in hotfixes in hotfix7 (default off)
+
+The image carries the full upstream 09-06 patch tree; toggles default `0`, turn them on via env
+(the recipe exposes four of them):
+
+- `DSPARK_ENABLE_DSPARK_SWA_PREFIX`=1: recompute the draft sliding window on prefix-cache hits
+  (Anemll #2 port; repeated identical prompts otherwise degenerate to a truncated response) —
+  **correctness fix, recommended on**
+- `DSPARK_ENABLE_DSML_RECOVERY`=1: a bare `<invoke name=...>` becomes a provisional tool call,
+  validated against the request's declared tools (vllm#52645)
+- `DSPARK_ENABLE_ISSUE191_TOOLCALL_FAILCLOSED`=1: strict named/required tool_choice contract
+- `DSPARK_ENABLE_C128A_PREFILL_CACHE`=1: reuse the C128A prefill index conversion (SM120; no
+  end-to-end speedup implied)
+- The rest (`DSPARK_ENABLE_ROPE_SWA_FIX` / `DSPARK_ENABLE_DSPARK_BLOCK_K` /
+  `DSPARK_ENABLE_ISSUE144_EFFORT_ALIGN` / `DSPARK_ENABLE_MXFP4_INDEXER_CACHE`, the latter
+  requiring `DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS=1`) are injectable via env
 
 ## Speed
 

@@ -12,10 +12,23 @@ V4 family (1M context).
   as a still frame; up to 8 per request by default, **user messages only**; **no video
   encoder** in the official weights)
 - Quant/speculation: NVFP4 DS-MLA · FlashInfer b12x + dspark speculation (k=6) · 1M context
-- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6`
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7`
   (Anemll + the Mia hotfix chain + native Vision-Exp image support; upstream snapshot
-  `bc2ef473a1…`)
+  `957890ac…` 2026-09-06; incl. the 09-05 image-cap fix)
 - Served name: `deepseek-v4-flash-vision-exp`; API port defaults to `8888`
+
+## New opt-in hotfixes in hotfix7 (default off)
+
+- `DSPARK_ENABLE_DSPARK_SWA_PREFIX`=1: recompute the draft sliding window on prefix-cache hits
+  (Anemll #2 port) — **correctness fix, recommended on**
+- `DSPARK_ENABLE_DSPARK_BLOCK_K`=1: speculative k follows the trained `dspark_block_size`(5) —
+  Vision-Exp can run k=5 instead of the forced 6 (`num_nextn_predict_layers=3`); also drop
+  `MTP_NUM_TOKENS` to 5
+- `DSPARK_ENABLE_C128A_PREFILL_CACHE`=1: reuse the C128A prefill index conversion (SM120)
+- The rest (`DSPARK_ENABLE_ROPE_SWA_FIX` / `DSPARK_ENABLE_DSML_RECOVERY` /
+  `DSPARK_ENABLE_ISSUE144_EFFORT_ALIGN` / `DSPARK_ENABLE_MXFP4_INDEXER_CACHE` +
+  `DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS` / `DSPARK_ENABLE_ISSUE191_TOOLCALL_FAILCLOSED`)
+  are injectable via env
 
 ## Speed
 
@@ -36,7 +49,7 @@ Upstream Anemll measurements on the 1M/6 tier (results/RESULTS-2026-08-14.md):
 ## Upstream references
 
 - [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)
-  (vision-exp · upstream snapshot `bc2ef473a1…`)
+  (vision-exp · upstream snapshot `957890ac…` 09-06)
 - [Anemll/dspark-vllm-gx10](https://github.com/Anemll/dspark-vllm-gx10) · [vllm-project/vllm](https://github.com/vllm-project/vllm) · [local-inference-lab/b12x](https://github.com/local-inference-lab/b12x)
 - Upstream benches: [results/RESULTS-2026-08-14.md](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/blob/main/results/RESULTS-2026-08-14.md)
 

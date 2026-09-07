@@ -7,10 +7,24 @@ DeepSeek-V4-Flash（1M 上下文）。
 
 - 主模型：`deepseek-ai/DeepSeek-V4-Flash-0731`（~167 GB，Fireworks 分发后离线加载）
 - 量化/投机：NVFP4 DS-MLA · FlashInfer b12x + dspark 投机（k=5）· **1M 上下文**
-- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix6`
-  （Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` + Mia fail-closed 热修复链）
+- 镜像：`registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7`
+  （Anemll `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` + Mia fail-closed 热修复链，上游快照
+  `957890ac…` 2026-09-06）
 - 对外服务名：`deepseek-v4-flash-0731`；API 端口默认 `8888`
 - 默认思考 `low`（请求级可覆盖 off/low/high/max）
+
+## 09-05/09-06 新增 opt-in 热修复（hotfix7，默认关）
+
+镜像已 bake 上游最新补丁树，以下开关默认 `0`，需要时按环境变量开启（配方暴露其中 4 项）：
+
+- `DSPARK_ENABLE_DSPARK_SWA_PREFIX`=1：前缀缓存命中时重算草稿滑窗（Anemll #2 移植，避免
+  重复相同 prompt 退化成截断输出）——**正确性修复，建议开**
+- `DSPARK_ENABLE_DSML_RECOVERY`=1：裸 `<invoke name=...>` 按声明工具校验后提交（vllm#52645）
+- `DSPARK_ENABLE_ISSUE191_TOOLCALL_FAILCLOSED`=1：命名/required tool_choice 严格契约
+- `DSPARK_ENABLE_C128A_PREFILL_CACHE`=1：复用 C128A prefill 索引转换（SM120，无端到端提速承诺）
+- 其余（`DSPARK_ENABLE_ROPE_SWA_FIX` / `DSPARK_ENABLE_DSPARK_BLOCK_K` /
+  `DSPARK_ENABLE_ISSUE144_EFFORT_ALIGN` / `DSPARK_ENABLE_MXFP4_INDEXER_CACHE`，MXFP4 需
+  配 `DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS=1`）由环境注入即可
 
 ## 速度
 

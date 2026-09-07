@@ -18,13 +18,22 @@ text + image + video multimodal. Ported from
   wasted on readahead
 - Weights on GPU ~71.75 GiB + ~5.6 GiB runtime overhead; KV sized by
   `GPU_MEMORY_UTILIZATION`, **capped from the host side by `HOST_RESERVE_GIB=26`**
-  (GMU 0.78 -> ~16.46 GiB fp8 KV = 992,584-token pool, 3.79x a full 262k request)
+  (aligned with upstream **09-06 shipped**: `KV_TARGET_GIB=20` -> GMU 0.786 = 95.60 GiB
+  budget -> 16.67 GiB KV; ~15.98 GiB fp8 KV = ~1,132,586-token pool after vLLM profiling,
+  ~4.3x a full 262k request, pool varies ~10% across restarts)
+- **BF16 GDN/SSM recurrent state** (`MAMBA_SSM_CACHE_DTYPE=bfloat16`, upstream 09-06 shipped):
+  halves the per-step state traffic (~0.23 GB/seq/step) and the mamba page (attention block
+  3,200->1,664 tokens); +8.5% aggregate decode at 8 streams, needles 15/15 unchanged; empty =
+  the checkpoint's float32
+- **V2 model runner pinned** (`VLLM_USE_V2_MODEL_RUNNER=1`): the MTP draft copy is not in the
+  V2 default set, falls back to V1, and mutates its shared `compilation_config` - the 09-05
+  dynamic-K failure was cudagraph_mode silently becoming PIECEWISE; pinned on every 09-06 launch
 - **Image**: `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0`
   (official `vllm/vllm-openai:qwen38-flash-next` base + **all five** upstream MiaAI patches
   baked in: PLE-layer prefetch, PLE offload host handshake, MTP draft vocab, ModelOpt MXFP8
   BF16 fallback, QSA FP8-KV). The upstream repo rewrites vLLM files at launch; one-click
   Fireworks deploy uses this baked image - the stock image deadlocks PLE offload and breaks
-  fp8 KV
+  fp8 KV. The 09-06 changes are runtime env/args only - no new image needed
 - Port default `8888`; served-model-name `qwen3.8-flash-next`; OpenAI-compatible API
 
 ## Pre-deploy prerequisites (prepare on the node)
@@ -47,8 +56,10 @@ text + image + video multimodal. Ported from
 | `YARN` | 0 | 0 = native rope; 1 = YaRN -> `YARN_MAX_MODEL_LEN` (512k, factor 2.0) |
 | `YARN_MAX_MODEL_LEN` | 524288 | length served at YARN=1; 1M fails the single-Spark budget at BF16, don't raise |
 | `KV_CACHE_DTYPE` | fp8 | fp8 ~1.85x KV pool (2.73x a full 512k req); auto = BF16 |
-| `GPU_MEMORY_UTILIZATION` | 0.78 | shipped tier under the host-side cap (HOST_RESERVE=26); raising it must keep host headroom |
-| `MAX_NUM_SEQS` | 4 | measured at 1/2/3/4 streams |
+| `MAMBA_SSM_CACHE_DTYPE` | bfloat16 | GDN/SSM state dtype; bf16 +8.5% decode at 8 streams (09-06 shipped); empty = float32 |
+| `VLLM_USE_V2_MODEL_RUNNER` | 1 | pin V2 runner; 0 = unpinned (MTP draft copy may fall back to V1 and flip the graph mode) |
+| `GPU_MEMORY_UTILIZATION` | 0.786 | aligned with 09-06 shipped (KV_TARGET_GIB 20 -> GMU 0.786 = 95.60 GiB budget); raising it must keep host headroom |
+| `MAX_NUM_SEQS` | 4 | measured at 1/2/3/4 streams; KV pool ~4.3x (long context is the concurrency limit, not a throughput knob) |
 | `MTP` | 3 | trained-draft spec k=3 (0 off, saves ~1.49 GiB); multimodal requests fall back |
 | `MTP_DRAFT_VOCAB` | empty | host path to a token-id file; set = reduced-vocabulary drafting (+25% decode) |
 | `MAX_NUM_BATCHED_TOKENS` | 2048 | chunked-prefill batch cap; 8192 buys ~11% prefill for ~3% of the KV pool |
@@ -57,10 +68,10 @@ text + image + video multimodal. Ported from
 | `CUDAGRAPH_MODE` | FULL_DECODE_ONLY | NONE for eager debugging |
 | `VLLM_CACHE` | `${HOME}/.cache/vllm` | host dir of the packed PLE table (mounted at `/root/.cache/vllm`) |
 
-## Performance (upstream 2026-09-05, measured with sparkDash)
+## Performance (upstream 2026-09-05/09-06, measured with sparkDash)
 
 **decode** (prose, idle; shipped tier: 262k, FP8, MTP 3, `CUDAGRAPH_CAPTURE_SIZES=auto`,
-`MTP_DRAFT_VOCAB` 65,536 tokens all active):
+`MTP_DRAFT_VOCAB` 65,536 tokens all active) — 09-05 baseline:
 
 | streams | TTFT | aggregate | per stream | vs 09-04 |
 |---|---:|---:|---:|---:|
@@ -73,15 +84,29 @@ text + image + video multimodal. Ported from
   65,536 rows saves 2.61 GiB per draft step, and decode here is close to the memory-bandwidth
   wall, so bytes removed convert almost one-for-one into time. The target model verifies every
   token, so output is unchanged (MGSM: EN 94.8% vs 93.6%, ZH 86.4% vs 86.4% - flat/ahead)
-- MTP mean acceptance length ~2.1 of a possible 4; ~41 tok/s on predictable text
+- MTP mean acceptance length ~2.1 of a possible 4; **K=3 stays optimal at every concurrency**
+  (09-06 static sweep; nothing to schedule)
 
-**prefill** (fp8): 1,764 @8k / 2,265 @16k / **2,265 @32k** / 2,222 @64k / 2,110 @128k /
-1,913 @256k tok/s (+6.8-10.4% after the 09-05 optimizations - mostly the PLE page-fault
-prefetch, which runs for every prefilled token)
+**09-06 sweep** (512k YaRN, FP8, MTP 3, bf16 GDN state, V2 pinned, every verify width captured
+as a FULL decode graph):
+
+| streams | ms/engine step | tokens/step | aggregate | per stream |
+|---|---:|---:|---:|---:|
+| 1 | 61.5 | 3.00 | **48.7 tok/s** | 48.7 tok/s |
+| 4 | 96.2 | 2.84 | **113.7 tok/s** | 28.4 tok/s |
+| 8 | 131.0 | 2.81 | **162.9 tok/s** | 20.4 tok/s |
+
+- the 8-stream +8.5% (151.6 -> 164.5 tok/s) is the **bf16 GDN state**; K=1 loses 8-14%, and the
+  static K sweep (K=0/1/2/3 at S=1/2/4/8) found no crossover — K=3 stays optimal everywhere
+
+**prefill** (fp8, bf16 state): **2,200 @8k / 2,304 @16k / 2,314 @32k** / 2,257 @64k /
+2,146 @128k / 1,944 @256k tok/s (+~1.7% vs 09-05; the +8.5% from bf16 sits in decode, prefill
+is rate-limited the same way)
 
 - 512k YaRN + FP8 KV: **KV pool ~1,431,164-1,502,014 tokens (2.73-2.86x a full request)**
-- Host headroom (shipped 262k tier): 15.7 GiB after launch, 15.5-16.4 GiB over 40 idle
-  minutes, 14.26 GiB low with five concurrent ~60k prompts, `NV_ERR_NO_MEMORY` 0
+- Host headroom (shipped 262k tier, KV_TARGET 20): 15.7 GiB after launch, 15.5-16.4 GiB over 40
+  idle minutes, 14.26 GiB low with five concurrent ~60k prompts, `NV_ERR_NO_MEMORY` 0
+  (reproduced over the ten 09-06 launches)
 
 ## Multimodal
 
