@@ -264,6 +264,36 @@
       "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation (drafter sharded across TP), E3 grouped fat-MoE kernels (EXL3_FAT_GROUPED=1, +37-45% cold prefill) + EXL3_TEMP_ROWS_FUSED=32 + MNBT 7168, 850k context (upstream 2026-09-07 shipped: 850k / util 0.85 / rightsize), Vision on by default - ACR-baked image v1.2.0 (upstream Dockerfile @6599585, includes the exl3_fat_moe kernel + runtime patches); 62.9 tok/s single-stream (x2 aggregate 103.3 / x4 aggregate 146.5).",
       "name": "GLM-5.3-Flash EXL3 TP=2",
       "name_en": "GLM-5.3-Flash EXL3 TP=2"
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp-tp4-4x",
+      "provider": "deepseek-ai",
+      "model": "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+      "path": "recipes/deepseek-v4-flash-vision-exp-tp4-4x/fireworks.recipe.json",
+      "readme": "recipes/deepseek-v4-flash-vision-exp-tp4-4x/README.md",
+      "readme_en": "recipes/deepseek-v4-flash-vision-exp-tp4-4x/README.en.md",
+      "version": "1.0.0",
+      "params": "305B（含 ViT/Aligner）",
+      "context_length": 1048576,
+      "modality": "image-text-to-text",
+      "nodes": 4,
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix8",
+      "tags": [
+        "gb10",
+        "dspark",
+        "anemll",
+        "vllm",
+        "vision-exp",
+        "multimodal",
+        "1m-context",
+        "mia-hotfix",
+        "tp4",
+        "4-node"
+      ],
+      "description": "DeepSeek-V4-Flash-Vision-Exp 四节点 TP=4 DSpark 服务：hotfix8 镜像入口 TP 参数化（DSPARK_TP/NODES_TOTAL），原生图片输入、FlashInfer b12x + dspark k=3 投机（实测最优）、NVFP4 DS-MLA、1M 上下文、每 rank KV 池 ~7.57M token。实机（4×GB10）：单流 54.9 t/s，ws=6 聚合 160 t/s（K=3），TTFT ≤0.34s @36k；统一内存 121G 吃满稳定。TP8 不可行（FlashInfer DSV4 稀疏 MLA 无 8 头模板）。",
+      "description_en": "4-node TP=4 DSpark serving for DeepSeek-V4-Flash-Vision-Exp: hotfix8 entrypoint parametrizes TP (DSPARK_TP/NODES_TOTAL), native image input, FlashInfer b12x + dspark k=3 (measured best), NVFP4 DS-MLA, 1M context, ~7.57M-token KV pool per rank. Tested on 4xGB10: 54.9 t/s single-stream, ~160 t/s at ws=6 (K=3), TTFT <=0.34s @36k; unified 121G budget stable. TP8 impossible (FlashInfer DSV4 sparse-MLA lacks an 8-head template).",
+      "name": "DeepSeek-V4-Flash-Vision-Exp MiaAI-Lab（4 节点 TP=4）",
+      "name_en": "DeepSeek-V4-Flash-Vision-Exp MiaAI-Lab (4-node TP=4)"
     }
   ]
 }
