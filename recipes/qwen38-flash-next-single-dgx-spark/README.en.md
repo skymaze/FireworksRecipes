@@ -35,6 +35,11 @@ text + image + video multimodal. Ported from
   Fireworks deploy uses this baked image - the stock image deadlocks PLE offload and breaks
   fp8 KV. The 09-06 changes are runtime env/args only - no new image needed
 - Port default `8888`; served-model-name `qwen3.8-flash-next`; OpenAI-compatible API
+- **Upstream 09-07/09-08 `ABLIT` (gated Keys abliterated checkpoint,
+  `drowzeys/keys-Qwen3.8-flash-next-ablit-Mia-Single-Spark-only`) is intentionally not adopted**: it removes safety refusals and
+  needs you to accept gated HF terms and fetch a separate ~99 GiB checkpoint — an optional
+  experiment, not the shipped default; this recipe pins stock Mia NVFP4 (ABLIT=0). The other
+  new commits are checkpoint-state resolution, docs and sweep tooling — no shipped-config change
 
 ## Pre-deploy prerequisites (prepare on the node)
 

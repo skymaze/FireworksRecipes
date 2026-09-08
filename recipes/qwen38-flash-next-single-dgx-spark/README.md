@@ -29,6 +29,11 @@ drafting、原生 262,144 / YaRN 524,288 上下文、纯文本 + 图片 + 视频
   源仓库在启动时改写容器内文件；**Fireworks 一键部署用本烘焙镜像即可**——换回官方原镜像
   会 PLE 离载死锁、fp8 KV 不可用。09-06 的变更均为运行时 env/参数，无需新镜像
 - 服务端口默认 `8888`；served-model-name `qwen3.8-flash-next`；OpenAI 兼容 API
+- **上游 09-07/09-08 的 `ABLIT`（gated Keys 消偏检查点，
+  `drowzeys/keys-Qwen3.8-flash-next-ablit-Mia-Single-Spark-only`）不
+  采用**：它移除安全拒答、需在 HF 接受 gated 条款并另行下载 ~99 GiB 检查点，属于可选实验，
+  非 shipped 默认；本配方固定 stock Mia NVFP4（ABLIT=0）。其余新提交为检查点状态解析、
+  文档与 sweep 工具，不改 shipped 配置
 
 ## 部署前置（发布前在节点准备好）
 

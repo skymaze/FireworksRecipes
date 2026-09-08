@@ -16,7 +16,7 @@ following public reference works (configuration reference only):
 | 1M / NVFP4 KV dual-node recipe reference | [`jvr0x/dgx-spark-bench`](https://github.com/jvr0x/dgx-spark-bench) | Parameter/configuration reference only |
 | Dual-node NVFP4 KV reference | [`tonyd2wild/DeepSeek-v4-Flash-Vision-Exp-DSpark-1M-NVFP4-KV-2x-DGX-Spark`](https://github.com/tonyd2wild/DeepSeek-v4-Flash-Vision-Exp-DSpark-1M-NVFP4-KV-2x-DGX-Spark) | Parameter/configuration reference only |
 | Dual-node DSpark recipe route | [`MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark`](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark) | Parameter/configuration reference only |
-| Dual-node GLM-5.3-Flash EXL3 serve (2× GB10) | [`MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks`](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks) | Parameter/configuration reference only |
+| Dual-node GLM-5.3-Flash EXL3 serve (2× GB10) | [`MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks`](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks) | Parameter/configuration reference only (AGPL-3.0-or-later) |
 | Single-node Qwen3.8-Flash-Next vLLM serve (1× GB10, TP=1) | [`MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark`](https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Single-DGX-Spark) | Parameter/configuration reference only (AGPL-3.0-or-later) |
 
 Recipes reference prebuilt images hosted on registries (e.g.

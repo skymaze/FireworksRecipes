@@ -240,12 +240,12 @@
       "path": "recipes/glm-5.3-flash-exl3-tp2-2x/fireworks.recipe.json",
       "readme": "recipes/glm-5.3-flash-exl3-tp2-2x/README.md",
       "readme_en": "recipes/glm-5.3-flash-exl3-tp2-2x/README.en.md",
-      "version": "1.5.2",
+      "version": "1.6.0",
       "params": "320B/18B EXL3 4bpw",
-      "context_length": 1048576,
+      "context_length": 850000,
       "modality": "image-text-to-text",
       "nodes": 2,
-      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0",
+      "image": "registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.2.0",
       "tags": [
         "gb10",
         "glm-5.3",
@@ -256,12 +256,12 @@
         "dflash2",
         "speculative",
         "tp2",
-        "1m-context",
+        "850k-context",
         "multimodal",
         "miaai-lab"
       ],
-      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机（drafter 跨 TP 分片）、EXL3_FAT_KERNEL=1（E2 内核）+ MNBT 7168（上游 2026-09-01 E2 默认）、1M 上下文（padded slot-share）、Vision 默认开——ACR 烘焙镜像（上游现行 Dockerfile @c707598，E2 内核 + 7 个运行时补丁全量入镜像）；decode 单流 62.9 tok/s（×2 聚合 103.3 / ×4 聚合 146.5）。",
-      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation (drafter sharded across TP), EXL3_FAT_KERNEL=1 (E2 kernel) with MNBT 7168 (upstream 2026-09-01 E2 default), 1M context (padded slot-share), Vision on by default — ACR-baked image (upstream current Dockerfile @c707598, E2 kernel + all seven runtime patches baked in); 62.9 tok/s single-stream (x2 aggregate 103.3 / x4 aggregate 146.5).",
+      "description": "GLM-5.3-Flash（320B/A18B MoE）双节点 TP=2 EXL3/TR3 服务：Mia-AiLab uniform-K4 4bpw 权重镜像、fp8_ds_mla KV、DFlash2 k=7 投机（drafter 跨 TP 分片）、E3 grouped fat-MoE 内核（EXL3_FAT_GROUPED=1，+37–45% 冷 prefill）+ EXL3_TEMP_ROWS_FUSED=32 + MNBT 7168、850k 上下文（上游 2026-09-07 shipped：850k / util 0.85 / rightsize）、Vision 默认开——ACR 烘焙镜像 v1.2.0（上游 Dockerfile @6599585，含 exl3_fat_moe 内核 + 运行时补丁）；decode 单流 62.9 tok/s（×2 聚合 103.3 / ×4 聚合 146.5）。",
+      "description_en": "2-node TP=2 EXL3/TR3 serving for GLM-5.3-Flash (320B/A18B MoE): Mia-AiLab uniform-K4 4bpw weight mirror, fp8_ds_mla KV, DFlash2 k=7 speculation (drafter sharded across TP), E3 grouped fat-MoE kernels (EXL3_FAT_GROUPED=1, +37-45% cold prefill) + EXL3_TEMP_ROWS_FUSED=32 + MNBT 7168, 850k context (upstream 2026-09-07 shipped: 850k / util 0.85 / rightsize), Vision on by default - ACR-baked image v1.2.0 (upstream Dockerfile @6599585, includes the exl3_fat_moe kernel + runtime patches); 62.9 tok/s single-stream (x2 aggregate 103.3 / x4 aggregate 146.5).",
       "name": "GLM-5.3-Flash EXL3 TP=2",
       "name_en": "GLM-5.3-Flash EXL3 TP=2"
     }

@@ -21,7 +21,7 @@
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **双节点 TP=2** · fp8 KV + **DFlash2**（incoai drafter）· **262K 上下文** · 单流 46.9 tok/s · C1–C6 零失败（上游 one-to-copy 档）· KV 固定 6 GiB（678,661-token 池，09-02 pin）· `--enforce-eager` · 默认 RedHatAI checkpoint |
 | GLM-5.3-Flash (DFlash2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **四节点 TP=4**（上游当前默认）· fp8 KV + **DFlash2** k=7 块扩散投机（incoai drafter，KV 池成本 ~0）· **1M 上下文** · **3.9M-token KV 池**（24 GiB/rank，需无条件 flusher）· 聚合 ~503–530 tok/s（09-02 提速：max-num-seqs 64 / mnbt 16384 / FULL_AND_PIECEWISE）· 默认 RedHatAI checkpoint |
-| GLM-5.3-Flash (EXL3 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.1.0` | **双节点 TP=2** · **EXL3/TR3 4bpw 权重**（Mia-AiLab 镜像，KLD≈官方 FP8）× fp8 KV + **DFlash2** k=7 · **E2 fat-expert 内核**（EXL3_FAT_KERNEL=1）+ MNBT 7168 · **1M 上下文**（padded slot-share）· Vision 默认开 · 单流 62.9 tok/s（×4 聚合 146.5） |
+| GLM-5.3-Flash (EXL3 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-exl3:v1.2.0` | **双节点 TP=2** · **EXL3/TR3 4bpw 权重**（Mia-AiLab 镜像，KLD≈官方 FP8）× fp8 KV + **DFlash2** k=7 · **E3 grouped fat-MoE 内核**（EXL3_FAT_GROUPED=1，冷 prefill +37–45%）+ EXL3_TEMP_ROWS_FUSED=32 + MNBT 7168 · **850k 上下文**（上游 09-07 shipped：850k/0.85/rightsize）· Vision 默认开 · 单流 62.9 tok/s（×4 聚合 146.5）· 冷 prefill 256k ~1,517 tok/s |
 
 > **拓扑固定**：每条配方声明**确切的节点数**（如 2 节点 · TP=2 或 4 节点 · TP=4）；
 > Fireworks 发布时必须恰好匹配，模型参数按该拓扑调优。不同拓扑请选用对应配方。
