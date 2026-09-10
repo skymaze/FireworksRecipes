@@ -14,11 +14,10 @@ Current recipes:
 
 | Recipe | Image | Description |
 |---|---|---|
-| DeepSeek-V4-Flash (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7` | 2-node TP=2 DSpark · FlashInfer b12x + dspark spec · NVFP4 DS-MLA · 1M context |
-| [DeepSeek-V4-Flash-Vision-Exp (DSpark)](../recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7` | **2-node TP=2** (multimodal) · **native image input** (OpenAI image_url, ≤8 per request / user messages only / no video · incl. upstream vision fixes #168/#176/#179 + 09-05 image-cap fix) · FlashInfer b12x + dspark spec k=6 · NVFP4 DS-MLA · **1M context** (dev: image ready, hotfix7; checkpoint hardware-validation pending) |
 | [DeepSeek-V4-Flash-Vision-Exp (TP=4)](../recipes/deepseek-v4-flash-vision-exp-tp4-4x/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix8` | **4-node TP=4** (multimodal) · hotfix8 entrypoint **TP-parametrized** (DSPARK_TP/NODES_TOTAL) · FlashInfer b12x + dspark **k=3** (measured best) · NVFP4 DS-MLA · **1M context** · tested: 54.9 single-stream / ~160 t/s at ws=6, ~7.57M-token KV pool per rank · **TP8 impossible** (FlashInfer DSV4 sparse-MLA lacks an 8-head template; model has 64 heads) |
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **4-node TP=4** DSpark · FlashInfer b12x + dspark k=5 · NVFP4 DS-MLA · **1M context** · verified on a real agentic workload |
-| DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context |
+| [DeepSeek-V4-Flash-0731 (Spark b12x)](../recipes/deepseek-v4-flash-0731-spark-b12x/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/spark-vllm-b12x:v1.0.0` | **2-node TP=2** Spark-vLLM · B12X MLA SPARSE + b12x MoE/linear · dspark k=5 · **FP8 KV** · instanttensor + AOT · 1M context · tested: 33.4 single-stream / 71.5 t/s aggregate at 8-way, prefix cache hit (verified 09-10) |
+| [DeepSeek-V4-Flash-Vision-Exp (Spark b12x)](../recipes/deepseek-v4-flash-vision-exp-spark-b12x/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/spark-vllm-b12x:v1.0.0` | **2-node TP=2** (multimodal) · native image input + thinking mode · **FP8 KV** · dspark k=6 · 1M context · tested: image understanding correct, 27.4 single-stream / 59.1 t/s aggregate at 8-way (verified 09-10) |
 | [Qwen3.8-Flash-Next (single-node TP=1 · MiaAI-Lab)](../recipes/qwen38-flash-next-single-dgx-spark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0` | **single-node TP=1** (176.9B · Mia-AiLab NVFP4 ~99 GB) · **26.82 GiB n-gram/PLE lookup memory-mapped from NVMe** (`VLLM_PLE_CPU_OFFLOAD=1` + MADV_RANDOM + PLE prefetch, 1,366 -> 57 KiB disk read/token) · MTP k=3 + **reduced-vocabulary drafting** (MTP_DRAFT_VOCAB, +25% decode) · **FP8 KV** (~1.85x pool) · **262K native / 512K optional YaRN** · host-side capped budget (KV_TARGET_GIB 20 → GMU 0.786, BF16 GDN + V2 runner pinned, 09-06 aligned) · reasoning on by default · image/video multimodal · decode ~46-49 tok/s single-stream (108-114 aggregate at 4) · prefill peak ~2,265 tok/s @32k (from the MiaAI-Lab single-Spark repo) |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **4-node TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** context · spark-kit production overlays |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **2-node TP=2** · fp8 KV + **DFlash2** (incoai drafter) · **262K context** · 46.9 tok/s single-stream · C1-C6 zero failures (upstream one-to-copy tier) · pinned 6 GiB KV (678,661-token pool, 09-02) · `--enforce-eager` · default RedHatAI checkpoint |
@@ -66,10 +65,8 @@ FireworksRecipes/
 ├── .gitignore
 ├── recipes/
 │   ├── index.json                  # catalog manifest (store data source)
-│   ├── deepseek-v4-flash-dspark/   # fireworks.recipe.json + README(.en)
-│   ├── deepseek-v4-flash-vision-exp-dspark/   # 2-node TP=2 · Vision-Exp multimodal (dev, pending hardware validation)
 │   ├── deepseek-v4-flash-0731-tp4-4x/   # 4-node TP=4 (agentic-tuned, verified)
-│   ├── deepseek-v4-flash-0731-spark-b12x/   # 2-node TP=2 · eugr/spark-vllm-b12x (from docker run, not yet verified)
+│   ├── deepseek-v4-flash-0731-spark-b12x/   # 2-node TP=2 · spark-vllm-b12x (verified on hardware, 09-10)
 │   ├── qwen38-flash-next-single-dgx-spark/   # single-node TP=1 · vLLM (PLE table offloaded from NVMe + MTP, from the MiaAI-Lab single-Spark repo)
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
@@ -95,7 +92,7 @@ curl -s http://<head-ip>:8888/v1/chat/completions \
 
 ## Add / change a recipe
 
-1. `cp -r recipes/deepseek-v4-flash-dspark recipes/<new-id>` (drop non-recipe files).
+1. `cp -r recipes/deepseek-v4-flash-0731-spark-b12x recipes/<new-id>` (drop non-recipe files).
 2. Edit `fireworks.recipe.json` (`name / description / image / variable defaults / nodes / version`).
 3. Write `README.md` (+ optional `README.en.md`).
 4. Register the entry in `recipes/index.json` (must match the recipe's

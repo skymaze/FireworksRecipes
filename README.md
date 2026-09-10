@@ -13,11 +13,10 @@
 
 | 配方 | 镜像 | 说明 |
 |---|---|---|
-| DeepSeek-V4-Flash (DSpark) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7` | 双节点 TP=2 DSpark 服务 · FlashInfer b12x + dspark 投机 · NVFP4 DS-MLA · 1M 上下文 |
-| [DeepSeek-V4-Flash-Vision-Exp (DSpark)](recipes/deepseek-v4-flash-vision-exp-dspark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix7` | **双节点 TP=2**（多模态）· **原生图片输入**（OpenAI image_url ≤8 张 / 仅 user 消息 / 无视频 · 含上游 #168/#176/#179 vision 修复 + 09-05 image-cap 修复）· FlashInfer b12x + dspark 投机 k=6 · NVFP4 DS-MLA · **1M 上下文**（dev：镜像就绪 hotfix7，checkpoint 待实机验证） |
 | [DeepSeek-V4-Flash-Vision-Exp (TP=4)](recipes/deepseek-v4-flash-vision-exp-tp4-4x/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/dspark-vllm-gx10-mia:v0.1.1-hotfix8` | **四节点 TP=4**（多模态）· hotfix8 入口 **TP 参数化**（DSPARK_TP/NODES_TOTAL）· FlashInfer b12x + dspark **k=3**（实测最优）· NVFP4 DS-MLA · **1M 上下文** · 实机：单流 54.9 / ws=6 聚合 160 t/s，每 rank KV ~7.57M token · **TP8 不可行**（FlashInfer DSV4 稀疏-MLA 无 8 头模板，模型 64 头） |
 | DeepSeek-V4-Flash (TP=4) | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` | **四节点 TP=4** DSpark 服务 · FlashInfer b12x + dspark 投机 k=5 · NVFP4 DS-MLA · **1M 上下文** · agentic 工作负载实机验证 |
-| DeepSeek-V4-Flash (Spark b12x) | `eugr/spark-vllm-b12x:latest` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 |
+| [DeepSeek-V4-Flash-0731 (Spark b12x)](recipes/deepseek-v4-flash-0731-spark-b12x/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/spark-vllm-b12x:v1.0.0` | **双节点 TP=2** Spark-vLLM 服务 · B12X MLA SPARSE + b12x MoE/线性 · dspark 投机 k=5 · **FP8 KV** · instanttensor + AOT · 1M 上下文 · 实机：单流 33.4 / 8 并发聚合 71.5 tok/s，前缀缓存命中（09-10 验证） |
+| [DeepSeek-V4-Flash-Vision-Exp (Spark b12x)](recipes/deepseek-v4-flash-vision-exp-spark-b12x/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/spark-vllm-b12x:v1.0.0` | **双节点 TP=2**（多模态）· 原生图片输入 + 思考模式 · **FP8 KV** · dspark 投机 k=6 · 1M 上下文 · 实机：图文识别正确，单流 27.4 / 8 并发聚合 59.1 tok/s（09-10 验证） |
 | [Qwen3.8-Flash-Next (单节点 TP=1 · MiaAI-Lab)](recipes/qwen38-flash-next-single-dgx-spark/README.md) | `registry.cn-shanghai.aliyuncs.com/aixn-public/qwen38-flash-next:v1.2.0` | **单节点 TP=1**（176.9B · Mia-AiLab NVFP4 ~99 GB）· **26.82 GiB n-gram/PLE 查找表由 NVMe 内存映射离载**（`VLLM_PLE_CPU_OFFLOAD=1` + MADV_RANDOM + PLE prefetch，每 token 磁盘读 1,366→57 KiB）· MTP k=3 + **reduced-vocabulary drafting**（MTP_DRAFT_VOCAB，decode +25%）· **FP8 KV**（≈1.85× 池）+ **BF16 GDN 状态** + V2 runner 固定（对齐上游 09-06）· **262K 原生上下文 / 512K YaRN 可选** · 宿主侧封顶预算（KV_TARGET_GIB 20 → GMU 0.786）· 推理默认开 · 图片/视频多模态 · decode 单流 ~46–49 tok/s（4 流聚合 108–114）· prefill 峰值 ~2,265 tok/s @32k（源自 MiaAI-Lab 单机仓库） |
 | GLM-5.2 QuantTrio (DCP4) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm52-dcp4:v0.27.1-spark-kit` | **四节点 TP=4 + DCP4** · B12X MLA SPARSE + a2a · MTP k=2 · **nvfp4_ds_mla KV** · **315,968** 上下文 · spark-kit 生产 overlay |
 | GLM-5.3-Flash (DFlash2 TP=2) | `registry.cn-shanghai.aliyuncs.com/aixn-public/glm53-flash-sm121:v11-dflash2` | **双节点 TP=2** · fp8 KV + **DFlash2**（incoai drafter）· **262K 上下文** · 单流 46.9 tok/s · C1–C6 零失败（上游 one-to-copy 档）· KV 固定 6 GiB（678,661-token 池，09-02 pin）· `--enforce-eager` · 默认 RedHatAI checkpoint |
@@ -77,14 +76,12 @@ FireworksRecipes/
 ├── .gitignore
 ├── recipes/
 │   ├── index.json                  # ★ 目录清单，商店数据源
-│   ├── deepseek-v4-flash-dspark/
-│   ├── deepseek-v4-flash-vision-exp-dspark/   # 双节点 TP=2 · Vision-Exp 多模态（dev 测试中，待实机验证）
 │   │   ├── fireworks.recipe.json   # ★ Fireworks 原生配方
 │   │   └── README.md / README.en.md
 │   ├── deepseek-v4-flash-0731-tp4-4x/   # 4 节点 TP=4（agentic 实机验证调优）
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
-│   ├── deepseek-v4-flash-0731-spark-b12x/   # 2 节点 TP=2 · eugr/spark-vllm-b12x（源自 docker run，未实机验证）
+│   ├── deepseek-v4-flash-0731-spark-b12x/   # 2 节点 TP=2 · spark-vllm-b12x（09-10 实机验证）
 │   │   ├── fireworks.recipe.json
 │   │   └── README.md / README.en.md
 │   ├── qwen38-flash-next-single-dgx-spark/   # 单节点 TP=1 · vLLM（PLE 表 NVMe 离载 + MTP，源自 MiaAI-Lab 单机仓库）
@@ -123,7 +120,7 @@ curl -s http://<head-ip>:8888/v1/chat/completions \
 
 ## 新增 / 修改一个配方
 
-1. 复制目录：`cp -r recipes/deepseek-v4-flash-dspark recipes/<new-id>`（去掉非配方文件）。
+1. 复制目录：`cp -r recipes/deepseek-v4-flash-0731-spark-b12x recipes/<new-id>`（去掉非配方文件）。
 2. 改 `fireworks.recipe.json`：`name / description / image / 变量默认值 / nodes / version`。
 3. 写 `README.md`（可加 `README.en.md`）。
 4. 在 `recipes/index.json` 登记一条（`image/version/nodes` 必须与配方一致，否则
