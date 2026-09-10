@@ -6,9 +6,14 @@ over RoCE) from Fireworks, at 1M context.
 ## Model
 
 - Base model: `deepseek-ai/DeepSeek-V4-Flash-0731` (distributed by Fireworks, loaded offline)
-- Backends/quant: **B12X MLA SPARSE** attention + **b12x** MoE/linear · **FP8 KV** · dspark
+- Backends/quant: **B12X** attention + **b12x** MoE/linear · **FP8 KV** · dspark
   speculation (k=5) · 1M context; instanttensor + AOT compile (fast first boot)
-- Image: `eugr/spark-vllm-b12x:latest` (spark-vllm b12x prebuilt vLLM distribution image)
+- Image: `registry.cn-shanghai.aliyuncs.com/aixn-public/spark-vllm-b12x:v1.0.0`
+  (baked: `eugr/spark-vllm-b12x` nightly-20260909 base with the
+  `instanttensor-hybrid-draft-loader` patch applied at build time, see
+  [`docker/spark-vllm-b12x`](../../docker/spark-vllm-b12x/README.md);
+  parameters aligned with the upstream 2026-09-03 new b12x branch:
+  `--attention-backend B12X`, capture 48, MEGA_AOT_ARTIFACT 1)
 - API port defaults to `8000`; default thinking mode `high`
 
 ## Speed
