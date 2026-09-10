@@ -148,7 +148,7 @@
       "path": "recipes/qwen38-flash-next-vllm/fireworks.recipe.json",
       "readme": "recipes/qwen38-flash-next-vllm/README.md",
       "readme_en": "recipes/qwen38-flash-next-vllm/README.en.md",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "params": "176.9B（51.2B PLE 表 NVMe 流式）/ NVFP4",
       "context_length": 262144,
       "modality": "image-text-to-text",
